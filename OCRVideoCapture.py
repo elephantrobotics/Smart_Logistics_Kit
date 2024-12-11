@@ -1,0 +1,116 @@
+from paddleocr import PaddleOCR
+import cv2
+import numpy as np
+from PIL import Image, ImageDraw, ImageFont
+import time
+import logging
+logging.getLogger('ppocr').setLevel(logging.WARNING)
+class OCRVideoCapture:
+    def __init__(self, camera_index=0, font_path="./SIMFANG.TTF", font_size=40):
+       
+        logging.basicConfig(level=logging.ERROR)
+        self.ocr = PaddleOCR(use_angle_cls=True, lang='ch')
+
+        # 获取视频流
+        self.cap = cv2.VideoCapture(self.gstreamer_pipeline(sensor_id = camera_index), cv2.CAP_GSTREAMER)
+
+        self.font = ImageFont.truetype(font_path, font_size)
+        self.text_color = (0, 255, 0)
+        self.time_out=30
+        self.start_time=time.time()
+
+        if not self.cap.isOpened():
+            raise Exception("无法打开摄像头")
+
+    def gstreamer_pipeline(self,
+        # 硬编码参数
+        sensor_id,
+        capture_width = 1920,
+        capture_height = 1080,
+        display_width = 960,
+        display_height = 540,
+        framerate = 30,
+        flip_method = 0
+    ):
+        return (
+            "nvarguscamerasrc sensor-id=%d !"
+            "video/x-raw(memory:NVMM), width=(int)%d, height=(int)%d, framerate=(fraction)%d/1 ! "
+            "nvvidconv flip-method=%d ! "
+            "video/x-raw, width=(int)%d, height=(int)%d, format=(string)BGRx ! "
+            "videoconvert ! "
+            "video/x-raw, format=(string)BGR ! appsink"
+            % (
+                sensor_id,
+                capture_width,
+                capture_height,
+                framerate,
+                flip_method,
+                display_width,
+                display_height,
+            )
+        )
+
+    def process_frame(self, raw_frame):
+        result = self.ocr.ocr(raw_frame, cls=True)
+        if result!=[None]:
+            for line in result:
+                for word_info in line:
+                    text = word_info[1][0]
+                    confidence = word_info[1][1]
+                    
+                    box = word_info[0]
+                    cv2.polylines(raw_frame, [np.array(box).astype(np.int32)], isClosed=True, color=(0, 255, 0), thickness=2)
+                    pil_image = Image.fromarray(raw_frame)
+                    draw = ImageDraw.Draw(pil_image)
+
+                    bbox = draw.textbbox((0, 0), text, font=self.font)  
+                    box_x0, box_y0, box_x1, box_y1 = bbox  
+                    text_width = box_x1 - box_x0
+                    text_height = box_y1 - box_y0
+
+                    center_x = (box[0][0] + box[2][0]) / 2
+                    center_y = (box[0][1] + box[2][1]) / 2
+                    text_x = center_x - text_width / 2
+                    text_y = center_y - text_height / 2
+
+                    draw.text((text_x, text_y), text, font=self.font, fill=self.text_color)
+                 
+                    char_frame = np.array(pil_image)
+
+                    return [char_frame,text]
+
+    def start_capture(self):
+        while True:
+            ret, frame = self.cap.read()
+            if not ret:
+                print("无法读取视频流")
+                break
+
+            result = self.process_frame(frame)
+ 
+            if result:
+                cv2.imshow("Char Scanner", result[0])
+                cv2.waitKey(1500)
+                cv2.destroyAllWindows()
+                return result[1]
+            else:
+                cv2.imshow("Char Scanner",frame)
+            
+                # 按 'q' 键退出
+                if cv2.waitKey(1) & 0xFF == ord('q'):
+                    cv2.destroyAllWindows()
+                    break
+            if time.time()-self.start_time>self.time_out:
+                print("识别超时")
+                cv2.destroyAllWindows()
+                return -1
+
+    def release_resources(self):
+        self.cap.release()
+        cv2.destroyAllWindows()
+
+#使用案例
+if __name__ == "__main__":
+    ocr_capture = OCRVideoCapture(camera_index=1)  
+    for i in range(5):
+        print(ocr_capture.start_capture())
