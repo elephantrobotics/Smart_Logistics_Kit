@@ -5,50 +5,43 @@ from PIL import Image, ImageDraw, ImageFont
 import time
 import logging
 logging.getLogger('ppocr').setLevel(logging.WARNING)
+
+def gstreamer_pipeline(
+    sensor_id=0,
+    capture_width=1920,
+    capture_height=1080,
+    display_width=960,
+    display_height=540,
+    framerate=30,
+    flip_method=0,
+):
+    return (
+        "nvarguscamerasrc sensor-id=%d !"
+        "video/x-raw(memory:NVMM), width=(int)%d, height=(int)%d, framerate=(fraction)%d/1 ! "
+        "nvvidconv flip-method=%d ! "
+        "video/x-raw, width=(int)%d, height=(int)%d, format=(string)BGRx ! "
+        "videoconvert ! "
+        "video/x-raw, format=(string)BGR ! appsink"
+        % (
+            sensor_id,
+            capture_width,
+            capture_height,
+            framerate,
+            flip_method,
+            display_width,
+            display_height,
+        )
+    )
+
 class OCRVideoCapture:
     def __init__(self, camera_index=0, font_path="./SIMFANG.TTF", font_size=40):
        
         logging.basicConfig(level=logging.ERROR)
         self.ocr = PaddleOCR(use_angle_cls=True, lang='ch')
-
-        # 获取视频流
-        self.cap = cv2.VideoCapture(self.gstreamer_pipeline(sensor_id = camera_index), cv2.CAP_GSTREAMER)
-
         self.font = ImageFont.truetype(font_path, font_size)
         self.text_color = (0, 255, 0)
         self.time_out=30
         self.start_time=time.time()
-
-        if not self.cap.isOpened():
-            raise Exception("无法打开摄像头")
-
-    def gstreamer_pipeline(self,
-        # 硬编码参数
-        sensor_id,
-        capture_width = 1920,
-        capture_height = 1080,
-        display_width = 960,
-        display_height = 540,
-        framerate = 30,
-        flip_method = 0
-    ):
-        return (
-            "nvarguscamerasrc sensor-id=%d !"
-            "video/x-raw(memory:NVMM), width=(int)%d, height=(int)%d, framerate=(fraction)%d/1 ! "
-            "nvvidconv flip-method=%d ! "
-            "video/x-raw, width=(int)%d, height=(int)%d, format=(string)BGRx ! "
-            "videoconvert ! "
-            "video/x-raw, format=(string)BGR ! appsink"
-            % (
-                sensor_id,
-                capture_width,
-                capture_height,
-                framerate,
-                flip_method,
-                display_width,
-                display_height,
-            )
-        )
 
     def process_frame(self, raw_frame):
         result = self.ocr.ocr(raw_frame, cls=True)
@@ -81,6 +74,9 @@ class OCRVideoCapture:
 
     def start_capture(self):
         while True:
+            # 获取视频流
+            print(gstreamer_pipeline(flip_method=0))
+            self.cap = cv2.VideoCapture(gstreamer_pipeline(flip_method=0), cv2.CAP_GSTREAMER)
             ret, frame = self.cap.read()
             if not ret:
                 print("无法读取视频流")
