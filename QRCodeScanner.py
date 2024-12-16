@@ -11,7 +11,7 @@ class QRCodeScanner:
         self.font_path = font_path
         self.font_size = font_size
         self.font = ImageFont.truetype(self.font_path, self.font_size)
-        self.time_out=30
+        self.time_out=60
         self.cap = cv2.VideoCapture(camera_index) 
         self.text_color = (0, 255, 0)
         self.start_time=time.time()
@@ -75,7 +75,7 @@ class QRCodeScanner:
                     cv2.destroyAllWindows()
                     break
             if time.time()-self.start_time>self.time_out:
-                print("识别超时")
+                print("60s识别超时")
                 cv2.destroyAllWindows()
                 return -1
     

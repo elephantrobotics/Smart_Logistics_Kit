@@ -3,13 +3,15 @@
 import rospy
 import time
 import actionlib
+import signal
+import sys
 import Jetson.GPIO as GPIO
 
 from pymycobot.mycobot import MyCobot
 from pymycobot.utils import get_port_list
 
-# from OCRVideoCapture import OCRVideoCapture
-# from QRCodeScanner import QRCodeScanner
+from OCRVideoCapture import OCRVideoCapture
+from QRCodeScanner import QRCodeScanner
 
 from actionlib_msgs.msg import *
 from actionlib_msgs.msg import GoalID
@@ -33,7 +35,8 @@ class MapNavigation:
         GPIO.setmode(GPIO.BCM)
         GPIO.setup(19, GPIO.OUT)
         GPIO.setup(26, GPIO.OUT)
-    
+        self.pump_off()
+
     # init robot  pose AMCL
     def set_pose(self, xGoal, yGoal, orientation_z, orientation_w,covariance):
         pose = PoseWithCovarianceStamped()
@@ -95,34 +98,149 @@ class MapNavigation:
         twist.angular.z = theta
         self.pub.publish(twist)
 
-    def Pump_On(self):
+    def pump_on(self):
         GPIO.output(26, GPIO.LOW)
         GPIO.output(19, GPIO.HIGH)
 
-    def Pump_Off(self):
+    def pump_off(self):
         GPIO.output(26, GPIO.HIGH)
         GPIO.output(19, GPIO.LOW)
         time.sleep(0.05)
         GPIO.output(19, GPIO.HIGH)
 
 def pick():
+    global scanner
+    mc.send_angles([0,0,0,0,0,0], 60)
+    time.sleep(2)
+    for i in range(1):
+        mc.send_angles(angle_table["pick_watch"], 50)    
+
+        time.sleep(1)
+        print(scanner.start_capture())
+        time.sleep(5)   
+
+        mc.send_angles(angle_table["pick_init"], 50)    
+        time.sleep(1)
+
+        coords_s = mc.get_coords()
+        print(coords_s)
+        time.sleep(2)
+        
+        while coords_s is None:
+            time.sleep(0.5)
+            coords_s=mc.get_coords()
+            print("coords_s is None")
+            if coords_s is not None:
+                break
+        
+        if i ==0:
+            hight=40
+        else:
+            hight=65
+
+        coords_s[2]-=hight
+        mc.send_coords(coords_s,40,mode=1) #z轴下降
+        time.sleep(2)
+        map_navigation.pump_on()
+        time.sleep(2)
+        print("pump_on")
+
+        coords_s[2]+=hight        
+        mc.send_coords(coords_s,40,mode=1) #z轴抬高
+        time.sleep(2)
+########################################################################################rount2
+        mc.send_angles(angle_table["pick_point2"], 50)
+        time.sleep(1)
+
+        mc.send_angles(angle_table["place_init"], 50)
+        time.sleep(2)
+
+        coords_s = mc.get_coords()
+        print(coords_s)
+        time.sleep(2)
+        
+        while coords_s is None:
+            time.sleep(0.5)
+            coords_s=mc.get_coords()
+            print("coords_s is None")
+            if coords_s is not None:
+                break
+
+        if i ==0:
+            hight=20
+        else:
+            hight=15
+
+        coords_s[2]-=hight
+        mc.send_coords(coords_s,40,mode=1) #z轴下降
+        time.sleep(2)
+        map_navigation.pump_off()
+        print("pump_off")
+
+        coords_s[2]+=hight        
+        mc.send_coords(coords_s,40,mode=1) #z轴抬高
+        time.sleep(2)
+
+        scanner = None
+        scanner = QRCodeScanner()
+
+    # 结束后复位
+    print(area_table)
+    mc.send_angles(angle_table["move_init"], 50)
+    time.sleep(1)
+
+def load():
     mc.send_angles([0,0,0,0,0,0], 60)
     time.sleep(2)
 
-    time.sleep(1)
-    for i in range(4):
-        pass
+    mc.send_angles(angle_table["place_init"], 50)
+    time.sleep(2)
+
+    coords_s = mc.get_coords()
+    print(coords_s)
+    time.sleep(2)
+    
+    while coords_s is None:
+        time.sleep(0.5)
+        coords_s=mc.get_coords()
+        print("coords_s is None")
+        if coords_s is not None:
+            break
+
+    coords_s[2]-=50
+    mc.send_coords(coords_s,40,mode=1) #z轴下降
+    time.sleep(2)
+    map_navigation.pump_on()
+    time.sleep(2)
+    print("pump_off")
+
+    mc.send_angles(angle_table["place_point4"], 50)
+    time.sleep(2)
+
+    mc.send_angles(angle_table["place_point2"], 50)
+    time.sleep(2)
+
+    mc.send_angles(angle_table["place_point3"], 50)
+    time.sleep(2)
+    map_navigation.pump_off()
+
     # 结束后复位
     mc.send_angles(angle_table["move_init"], 50)
     time.sleep(1)
-    mc.set_gripper_value(0, 30)
+
+def signal_handler(signal, frame):
+    print("Ctrl+C pressed. Exiting...")
+    # Close all connections
+    running_flag = False
+    print("Connections closed.")
+    sys.exit()
 
 if __name__ == '__main__':
    
     goal_1 = [0.4281424582004547,0.6189473509788513,-0.018068829690399985,0.9998367453707727]
-    goal_2 = [0.8920876979827881,0.7039064764976501,0.00469590534314955,0.9999889741757196]
-    goal_3 = [1.3844168424606323,0.720277214050293,0.03193667903827325,0.9994898941620202]
-    pack_goal = [1.4083706140518188,0.29778820276260376,0.00014766695622705518,0.999999989097235]
+    goal_2 = [0.8920876979827881,0.6039064764976501,0.00469590534314955,0.9999889741757196]
+    goal_3 = [1.2844168424606323,0.620277214050293,0.03193667903827325,0.9994898941620202]
+    pack_goal = [1.4083706140518188,0.49778820276260376,0.00014766695622705518,0.999999989097235]
     charge_goal =[-0.027686625719070435,0.9285135269165039,-0.6785262706093567,0.7345761363486824]
 
     pose_1 = [0.4281424582004547,0.7189473509788513,-0.018068829690399985,0.9998367453707727,0.06853892326654787]
@@ -132,104 +250,183 @@ if __name__ == '__main__':
     charge_pose = [-0.027686625719070435,0.9285135269165039,-0.6785262706093567,0.7345761363486824,0.06853892326654787]
     
     angle_table = {
-    "init":[0,0,0,0,0,0],
+    "zero_position":[0,0,0,0,0,0],
     "move_init":[90.06, -30.41, 22.14, -1.05, 87.45, 0.39],
-    "pick_init":[85.42, 11.68, -25.46, 1.93, 86.13, 0],
-    "place_init":[85.42, -43.68, 21.26, -2.54, 34.54, 0]
+    "pick_watch":[5.44, 6.5, -13.09, -2.54, 81.82, -4.3],
+    "pick_init":[1.05, 38.23, -39.99, -1.05, 86.48, -6.5],
+    "pick_point2":[-57.91, 0.61, -8.34, 6.32, 19.24, -2.19], #抓取过渡点
+    "place_init":[-95.71, 22.41, -25.04, -3.07, 95.27, 1.4],
+    "place_point4":[-95.36, 7.03, -22.85, -3.07, 87.89, -23.46],
+    "place_point2":[-6.85, 24.78, -20.03, -2.9, 81.03, 11.16],
+    "place_point3":[84.99, 50.62, -45.17, -2.37, 79.54, 11.42]
+    }
+
+    area_table = {
+    "pack_0":[],
+    "pack_1":[],
     }
 
     map_navigation = MapNavigation()
 
     # ocr_capture = OCRVideoCapture(camera_index=0)
-
-    # scanner = QRCodeScanner()
+    global scanner
+    scanner = QRCodeScanner()
 
     plist = get_port_list()
     print(plist)
     mc = MyCobot(plist[0],115200) # 连接机械臂
 
+    mc.send_angles(angle_table["move_init"], 50)
+
     # print(mc.get_angles())
 
     # print(ocr_capture.start_capture()) # 识别文字，打印一号盒子的变量
 
-    # print(scanner.start_capture()) # 识别QR码，打印地址信息
+    # Register the Ctrl+C signal handler
+    global running_flag 
+    running_flag = True
+    signal.signal(signal.SIGINT, signal_handler)
 
-    x_goal, y_goal, orientation_z, orientation_w = goal_1
-    flag_feed_goalReached = map_navigation.moveToGoal(x_goal, y_goal, orientation_z, orientation_w)
-    if flag_feed_goalReached:
-        xGoal, yGoal, orientation_z, orientation_w,covariance = pose_1
-        #map_navigation.set_pose(xGoal, yGoal, orientation_z, orientation_w,covariance)
+    # while running_flag:
+    #     break
+    for i in range(1):##demo
 
-        # 旋转90°
-        map_navigation.pub_vel(0,0,-0.1)
-        time.sleep(3.5)
-        map_navigation.pub_vel(0,0,0)
-        print("rount 1")
+        x_goal, y_goal, orientation_z, orientation_w = goal_1
+        flag_feed_goalReached = map_navigation.moveToGoal(x_goal, y_goal, orientation_z, orientation_w)
+        if flag_feed_goalReached:
+            xGoal, yGoal, orientation_z, orientation_w,covariance = pose_1
+            #map_navigation.set_pose(xGoal, yGoal, orientation_z, orientation_w,covariance)
 
-        time.sleep(3)
-        pass# print(ocr_capture.start_capture()) # 识别文字，打印一号盒子的变量
+            # 旋转90°
+            map_navigation.pub_vel(0,0,-0.1)
+            time.sleep(3.5)
+            map_navigation.pub_vel(0,0,0)
+            print("rount 1")
 
-        map_navigation.pub_vel(0,0,-0.1)
-        time.sleep(8)
-        map_navigation.pub_vel(0,0,0)
-        print("rount 2")
+            time.sleep(3)
+            pass# print(ocr_capture.start_capture()) # 识别文字，打印一号盒子的变量
 
-        time.sleep(3)
-        pass # 识别文字，记下二号盒子的变量
-    else:
-        print("failed")
+            # 旋转180°
+            map_navigation.pub_vel(0,0,-0.1)
+            time.sleep(8)
+            map_navigation.pub_vel(0,0,0)
+            print("rount 2")
 
-    x_goal, y_goal, orientation_z, orientation_w = goal_2
-    flag_feed_goalReached = map_navigation.moveToGoal(x_goal, y_goal, orientation_z, orientation_w)
-    if flag_feed_goalReached:
-        xGoal, yGoal, orientation_z, orientation_w,covariance = pose_2
-        #map_navigation.set_pose(xGoal, yGoal, orientation_z, orientation_w,covariance)
-        # 旋转90°
-        map_navigation.pub_vel(0,0,-0.1)
-        time.sleep(3.5)
-        map_navigation.pub_vel(0,0,0)
-        print("rount 1")
+            time.sleep(3)
+            pass # 识别文字，记下二号盒子的变量
+        else:
+            print("failed")
 
-        time.sleep(3)
-        pass# print(ocr_capture.start_capture()) # 识别文字，打印三号盒子的变量
+        x_goal, y_goal, orientation_z, orientation_w = goal_2
+        flag_feed_goalReached = map_navigation.moveToGoal(x_goal, y_goal, orientation_z, orientation_w)
+        if flag_feed_goalReached:
+            xGoal, yGoal, orientation_z, orientation_w,covariance = pose_2
+            #map_navigation.set_pose(xGoal, yGoal, orientation_z, orientation_w,covariance)
+            # 旋转90°
+            map_navigation.pub_vel(0,0,-0.1)
+            time.sleep(3.5)
+            map_navigation.pub_vel(0,0,0)
+            print("rount 1")
 
-        map_navigation.pub_vel(0,0,-0.1)
-        time.sleep(8)
-        map_navigation.pub_vel(0,0,0)
-        print("rount 2")
+            time.sleep(3)
+            pass# print(ocr_capture.start_capture()) # 识别文字，打印三号盒子的变量
 
-        time.sleep(3)
-        pass # 识别文字，记下四号盒子的变量
-    else:
-        print("failed")
+            # 旋转180°
+            map_navigation.pub_vel(0,0,-0.1)
+            time.sleep(8)
+            map_navigation.pub_vel(0,0,0)
+            print("rount 2")
 
-    x_goal, y_goal, orientation_z, orientation_w = goal_3
-    flag_feed_goalReached = map_navigation.moveToGoal(x_goal, y_goal, orientation_z, orientation_w)
-    if flag_feed_goalReached:
-        xGoal, yGoal, orientation_z, orientation_w,covariance = pose_3
-        #map_navigation.set_pose(xGoal, yGoal, orientation_z, orientation_w,covariance)
-        # 旋转90°
-        map_navigation.pub_vel(0,0,0.1)
-        time.sleep(3.5)
-        map_navigation.pub_vel(0,0,0)
-        print("rount 1")
-        time.sleep(3)
-        # print(ocr_capture.start_capture()) # 识别文字，打印五号盒子的变量
-    else:
-        print("failed")
+            time.sleep(3)
+            pass # 识别文字，记下四号盒子的变量
+        else:
+            print("failed")
 
-    x_goal, y_goal, orientation_z, orientation_w = pack_goal
-    flag_feed_goalReached = map_navigation.moveToGoal(x_goal, y_goal, orientation_z, orientation_w)
-    if flag_feed_goalReached:
-        xGoal, yGoal, orientation_z, orientation_w,covariance = pack_pose
-        map_navigation.set_pose(xGoal, yGoal, orientation_z, orientation_w,covariance)
-    else:
-        print("failed")
+        x_goal, y_goal, orientation_z, orientation_w = goal_3
+        flag_feed_goalReached = map_navigation.moveToGoal(x_goal, y_goal, orientation_z, orientation_w)
+        if flag_feed_goalReached:
+            xGoal, yGoal, orientation_z, orientation_w,covariance = pose_3
+            #map_navigation.set_pose(xGoal, yGoal, orientation_z, orientation_w,covariance)
+            # 旋转90°
+            map_navigation.pub_vel(0,0,0.1)
+            time.sleep(3.5)
+            map_navigation.pub_vel(0,0,0)
+            print("rount 1")
+            time.sleep(3)
+            # print(ocr_capture.start_capture()) # 识别文字，打印五号盒子的变量
+        else:
+            print("failed")
 
-    x_goal, y_goal, orientation_z, orientation_w = charge_goal
-    flag_feed_goalReached = map_navigation.moveToGoal(x_goal, y_goal, orientation_z, orientation_w)
-    if flag_feed_goalReached:
-        xGoal, yGoal, orientation_z, orientation_w,covariance = charge_goal
-        map_navigation.set_pose(xGoal, yGoal, orientation_z, orientation_w,covariance)
-    else:
-        print("failed")
+
+    # ########################################################
+    # # 货架区域离墙太近了，里程计误差，导航容易卡在该点位
+        x_goal, y_goal, orientation_z, orientation_w = pack_goal
+        flag_feed_goalReached = map_navigation.moveToGoal(x_goal, y_goal, orientation_z, orientation_w)
+        if flag_feed_goalReached:
+            xGoal, yGoal, orientation_z, orientation_w,covariance = pack_pose
+            map_navigation.set_pose(xGoal, yGoal, orientation_z, orientation_w,covariance)
+
+            # y平移两秒
+            map_navigation.pub_vel(0,-0.1,0)
+            time.sleep(2.35)
+            map_navigation.pub_vel(0,0,0)
+
+            # y平移两秒
+            map_navigation.pub_vel(0.1,0,0)
+            time.sleep(1)
+
+            map_navigation.pub_vel(0,0,0) 
+
+            pass    # 识别       
+            pick()  # 抓取      
+        else:
+            print("failed")
+    # # #######################################################
+    # 导航到2号区域的4号盒子
+        x_goal, y_goal, orientation_z, orientation_w = goal_2
+        flag_feed_goalReached = map_navigation.moveToGoal(x_goal, y_goal, orientation_z, orientation_w)
+        if flag_feed_goalReached:
+            xGoal, yGoal, orientation_z, orientation_w,covariance = pose_2
+            # 旋转90°
+            map_navigation.pub_vel(0,0,0.1)
+            time.sleep(3.5)
+            map_navigation.pub_vel(0.1,0,0)
+            time.sleep(5.7)
+            map_navigation.pub_vel(0,0,0)
+            print("rount 1")
+            
+            load()
+
+            map_navigation.pub_vel(-0.1,0,0)
+            time.sleep(5.7)
+            map_navigation.pub_vel(0,0,0)
+
+    # #######################################################
+    # # 导航到1号区域的1号盒子
+    #     x_goal, y_goal, orientation_z, orientation_w = goal_1
+    #     flag_feed_goalReached = map_navigation.moveToGoal(x_goal, y_goal, orientation_z, orientation_w)
+    #     if flag_feed_goalReached:
+    #         xGoal, yGoal, orientation_z, orientation_w,covariance = pose_1
+    #         # 旋转90°
+    #         map_navigation.pub_vel(0,0,-0.1)
+    #         time.sleep(3.5)
+    #         map_navigation.pub_vel(0.1,0,0)
+    #         time.sleep(1.5)
+    #         map_navigation.pub_vel(0,0,0)
+    #         print("rount 1")
+            
+    #         load()
+
+    #         map_navigation.pub_vel(-0.1,0,0)
+    #         time.sleep(1.5)
+            
+    # #######################################################
+    # # 充电区离墙太近了，里程计误差，导航容易卡在该点位
+
+    #     x_goal, y_goal, orientation_z, orientation_w = charge_goal
+    #     flag_feed_goalReached = map_navigation.moveToGoal(x_goal, y_goal, orientation_z, orientation_w)
+    #     if flag_feed_goalReached:
+    #         xGoal, yGoal, orientation_z, orientation_w,covariance = charge_goal
+    #         map_navigation.set_pose(xGoal, yGoal, orientation_z, orientation_w,covariance)
+    #     else:
+    #         print("failed")

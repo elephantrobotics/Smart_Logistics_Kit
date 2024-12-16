@@ -1,5 +1,6 @@
-from paddleocr import PaddleOCR
 import cv2
+from paddleocr import PaddleOCR
+
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 import time
@@ -35,7 +36,7 @@ def gstreamer_pipeline(
 
 class OCRVideoCapture:
     def __init__(self, camera_index=0, font_path="./SIMFANG.TTF", font_size=40):
-       
+        pass
         logging.basicConfig(level=logging.ERROR)
         self.ocr = PaddleOCR(use_angle_cls=True, lang='ch')
         self.font = ImageFont.truetype(font_path, font_size)
@@ -73,33 +74,40 @@ class OCRVideoCapture:
                     return [char_frame,text]
 
     def start_capture(self):
-        while True:
-            # 获取视频流
-            print(gstreamer_pipeline(flip_method=0))
-            self.cap = cv2.VideoCapture(gstreamer_pipeline(flip_method=0), cv2.CAP_GSTREAMER)
-            ret, frame = self.cap.read()
-            if not ret:
-                print("无法读取视频流")
-                break
+        window_title = "CSI Camera"
+        video_capture = cv2.VideoCapture(gstreamer_pipeline(flip_method=0), cv2.CAP_GSTREAMER)
+        if video_capture.isOpened():
+            try:
+                window_handle = cv2.namedWindow(window_title, cv2.WINDOW_AUTOSIZE)
+                while True:
+                    # 获取视频流
+                    ret, frame = video_capture.read()
+                    flipped_frame = cv2.flip(frame,-1)
+                    if not ret:
+                        print("无法读取视频流")
+                        break
 
-            result = self.process_frame(frame)
- 
-            if result:
-                cv2.imshow("Char Scanner", result[0])
-                cv2.waitKey(1500)
+                    result = self.process_frame(flipped_frame)
+        
+                    if result:
+                        cv2.imshow("Char Scanner", result[0])
+                        cv2.waitKey(1500)
+                        cv2.destroyAllWindows()
+                        return result[1]
+                    else:
+                        cv2.imshow("Char Scanner",flipped_frame)
+                    
+                        # 按 'q' 键退出
+                        if cv2.waitKey(1) & 0xFF == ord('q'):
+                            cv2.destroyAllWindows()
+                            break
+                    if time.time()-self.start_time>self.time_out:
+                        print("识别超时")
+                        cv2.destroyAllWindows()
+                        return -1
+            finally:
+                video_capture.release()
                 cv2.destroyAllWindows()
-                return result[1]
-            else:
-                cv2.imshow("Char Scanner",frame)
-            
-                # 按 'q' 键退出
-                if cv2.waitKey(1) & 0xFF == ord('q'):
-                    cv2.destroyAllWindows()
-                    break
-            if time.time()-self.start_time>self.time_out:
-                print("识别超时")
-                cv2.destroyAllWindows()
-                return -1
 
     def release_resources(self):
         self.cap.release()
