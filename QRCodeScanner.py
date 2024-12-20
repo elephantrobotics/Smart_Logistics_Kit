@@ -12,7 +12,7 @@ class QRCodeScanner:
         self.font_size = font_size
         self.font = ImageFont.truetype(self.font_path, self.font_size)
         self.time_out=60
-        self.cap = cv2.VideoCapture(camera_index) 
+        self.cap = cv2.VideoCapture("/dev/video1") 
         self.text_color = (0, 255, 0)
         self.start_time=time.time()
         if not self.cap.isOpened():
@@ -85,8 +85,8 @@ class QRCodeScanner:
         cv2.destroyAllWindows()
 
 # 使用示例
-if __name__ == "__main__":
-    scanner = QRCodeScanner()
-    for i in range(5):
-        print(scanner.start_capture())
+# if __name__ == "__main__":
+#     scanner = QRCodeScanner()
+#     for i in range(5):
+#         print(scanner.start_capture())
    

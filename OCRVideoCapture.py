@@ -35,7 +35,7 @@ def gstreamer_pipeline(
     )
 
 class OCRVideoCapture:
-    def __init__(self, camera_index=0, font_path="./SIMFANG.TTF", font_size=40):
+    def __init__(self, font_path="./SIMFANG.TTF", font_size=40):
         pass
         logging.basicConfig(level=logging.ERROR)
         self.ocr = PaddleOCR(use_angle_cls=True, lang='ch')
@@ -115,6 +115,6 @@ class OCRVideoCapture:
 
 #使用案例
 if __name__ == "__main__":
-    ocr_capture = OCRVideoCapture(camera_index=1)  
+    ocr_capture = OCRVideoCapture()  
     for i in range(5):
         print(ocr_capture.start_capture())
