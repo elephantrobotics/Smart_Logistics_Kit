@@ -5,6 +5,7 @@ import time
 import actionlib
 import signal
 import sys
+import os
 import Jetson.GPIO as GPIO
 
 from pymycobot.mycobot import MyCobot
@@ -244,6 +245,12 @@ if __name__ == '__main__':
     goal_2 = [0.8920876979827881,0.6039064764976501,0.00469590534314955,0.9999889741757196]#中间二号点
     goal_3 = [1.2844168424606323,0.620277214050293,0.03193667903827325,0.9994898941620202]#中间三号点
 
+    goal_4 = [0.4281424582004547,0.6189473509788513, -0.6608462641581993, 0.7433474168093117]#1号盒子姿态
+    goal_5 = [0.4281424582004547,0.6189473509788513, 0.7681211233139038, 0.7228808403015137]#2号盒子姿态
+    goal_6 = [0.8920876979827881, 0.6039064764976501, -0.6608462641581993, 0.7433474168093117]#3号盒子姿态
+    goal_7 = [0.8920876979827881, 0.6039064764976501, 0.7681211233139038, 0.7228808403015137]#4号盒子姿态
+    goal_8 = [1.2844168424606323,0.620277214050293, 0.7681211233139038, 0.7228808403015137]#5号盒子姿态
+
 ###########################################################################################################debug
 
     box_goals_1 = [
@@ -255,11 +262,11 @@ if __name__ == '__main__':
     ]
 
     box_goals_2 = [
-        [0.4281424582004547,0.6189473509788513, -0.7108462641581993, 0.7033474168093117],
-        [0.4281424582004547,0.6189473509788513, 0.7681211233139038, 0.7228808403015137],
-        [0.8920876979827881, 0.6039064764976501, -0.7108462641581993, 0.7033474168093117],
-        [0.8920876979827881, 0.6039064764976501, 0.7681211233139038, 0.7228808403015137],
-        [1.2844168424606323,0.620277214050293, 0.7681211233139038, 0.7228808403015137]
+        [0.4281424582004547,0.6189473509788513, -0.7108462641581993, 0.7033474168093117],#1号盒子姿态
+        [0.4281424582004547,0.6189473509788513, 0.7681211233139038, 0.7228808403015137],#2号盒子姿态
+        [0.8920876979827881, 0.6039064764976501, -0.7108462641581993, 0.7033474168093117],#3号盒子姿态
+        [0.8920876979827881, 0.6039064764976501, 0.7681211233139038, 0.7228808403015137],#4号盒子姿态
+        [1.2844168424606323,0.620277214050293, 0.7681211233139038, 0.7228808403015137]#5号盒子姿态
     ]
 
     box_goals_3 = [
@@ -271,7 +278,8 @@ if __name__ == '__main__':
     ]
 
 ###########################################################################################################
-    pack_goal = [1.4083706140518188,0.49778820276260376,0.00014766695622705518,0.999999989097235]
+    # old_pack_goal = [1.4083706140518188,0.49778820276260376,0.00014766695622705518,0.999999989097235]
+    pack_goal = [1.2083706140518188,0.35778820276260376,0.00014766695622705518,0.999999989097235]
     charge_goal =[-0.027686625719070435,0.9285135269165039,-0.6785262706093567,0.7345761363486824]
 
     pose_1 = [0.4281424582004547,0.7189473509788513,-0.018068829690399985,0.9998367453707727,0.06853892326654787]
@@ -336,20 +344,15 @@ if __name__ == '__main__':
         x_goal, y_goal, orientation_z, orientation_w = goal_1
         flag_feed_goalReached = map_navigation.moveToGoal(x_goal, y_goal, orientation_z, orientation_w)
         if flag_feed_goalReached:
-            # 旋转90°
-            map_navigation.pub_vel(0,0,-0.1)
-            time.sleep(3.5)
-            map_navigation.pub_vel(0,0,0)
-            print("rount 1")
+
+            x_goal, y_goal, orientation_z, orientation_w = goal_4
+            flag_feed_goalReached = map_navigation.moveToGoal(x_goal, y_goal, orientation_z, orientation_w)
 
             time.sleep(3)
             recognized_ocr_texts.append(ocr_capture.start_capture()) # 识别文字，打印一号盒子的变量
 
-            # 旋转180°
-            map_navigation.pub_vel(0,0,-0.1)
-            time.sleep(8)
-            map_navigation.pub_vel(0,0,0)
-            print("rount 2")
+            x_goal, y_goal, orientation_z, orientation_w = goal_5
+            flag_feed_goalReached = map_navigation.moveToGoal(x_goal, y_goal, orientation_z, orientation_w)
 
             time.sleep(3)
             recognized_ocr_texts.append(ocr_capture.start_capture()) # 识别文字，打印二号盒子的变量
@@ -359,20 +362,14 @@ if __name__ == '__main__':
         x_goal, y_goal, orientation_z, orientation_w = goal_2
         flag_feed_goalReached = map_navigation.moveToGoal(x_goal, y_goal, orientation_z, orientation_w)
         if flag_feed_goalReached:
-            # 旋转90°
-            map_navigation.pub_vel(0,0,-0.1)
-            time.sleep(3.5)
-            map_navigation.pub_vel(0,0,0)
-            print("rount 1")
+            x_goal, y_goal, orientation_z, orientation_w = goal_6
+            flag_feed_goalReached = map_navigation.moveToGoal(x_goal, y_goal, orientation_z, orientation_w)
 
             time.sleep(3)
             recognized_ocr_texts.append(ocr_capture.start_capture()) # 识别文字，打印三号盒子的变量
 
-            # 旋转180°
-            map_navigation.pub_vel(0,0,-0.1)
-            time.sleep(8)
-            map_navigation.pub_vel(0,0,0)
-            print("rount 2")
+            x_goal, y_goal, orientation_z, orientation_w = goal_7
+            flag_feed_goalReached = map_navigation.moveToGoal(x_goal, y_goal, orientation_z, orientation_w)
 
             time.sleep(3)
             recognized_ocr_texts.append(ocr_capture.start_capture()) # 识别文字，记下四号盒子的变量
@@ -382,12 +379,8 @@ if __name__ == '__main__':
         x_goal, y_goal, orientation_z, orientation_w = goal_3
         flag_feed_goalReached = map_navigation.moveToGoal(x_goal, y_goal, orientation_z, orientation_w)
         if flag_feed_goalReached:
-            # 旋转90°
-            map_navigation.pub_vel(0,0,0.1)
-            time.sleep(3.5)
-            map_navigation.pub_vel(0,0,0)
-            print("rount 1")
-            time.sleep(3)
+            x_goal, y_goal, orientation_z, orientation_w = goal_8
+            flag_feed_goalReached = map_navigation.moveToGoal(x_goal, y_goal, orientation_z, orientation_w)
             recognized_ocr_texts.append(ocr_capture.start_capture()) # 识别文字，打印五号盒子的变量
         else:
             print("failed")
@@ -416,16 +409,19 @@ if __name__ == '__main__':
         x_goal, y_goal, orientation_z, orientation_w = pack_goal
         flag_feed_goalReached = map_navigation.moveToGoal(x_goal, y_goal, orientation_z, orientation_w)
         if flag_feed_goalReached:
+
+            print("python agv_aruco")
+            os.system('python agv_aruco.py')
             # y平移2秒
-            map_navigation.pub_vel(0,-0.1,0)
-            time.sleep(2.35)
-            map_navigation.pub_vel(0,0,0)
+            # map_navigation.pub_vel(0,-0.1,0)
+            # time.sleep(2.35)
+            # map_navigation.pub_vel(0,0,0)
 
-            # x平移1秒
-            map_navigation.pub_vel(0.1,0,0)
-            time.sleep(1.5)
+            # # x平移1秒
+            # map_navigation.pub_vel(0.1,0,0)
+            # time.sleep(1.5)
 
-            map_navigation.pub_vel(0,0,0) 
+            # map_navigation.pub_vel(0,0,0) 
       
             pick()  # 抓取
             

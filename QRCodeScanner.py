@@ -14,7 +14,6 @@ class QRCodeScanner:
         self.time_out=60
         self.cap = cv2.VideoCapture("/dev/video1") 
         self.text_color = (0, 255, 0)
-        self.start_time=time.time()
         if not self.cap.isOpened():
             raise Exception("无法打开摄像头")
 
@@ -56,6 +55,7 @@ class QRCodeScanner:
 
     def start_capture(self):
         while True:
+            self.start_time=time.time()
             ret, frame = self.cap.read()
             if not ret:
                 print("无法读取视频流")
@@ -74,6 +74,7 @@ class QRCodeScanner:
                 if cv2.waitKey(1) & 0xFF == ord('q'):
                     cv2.destroyAllWindows()
                     break
+            print(time.time()-self.start_time)
             if time.time()-self.start_time>self.time_out:
                 print("60s识别超时")
                 cv2.destroyAllWindows()
