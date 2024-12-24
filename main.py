@@ -6,6 +6,7 @@ import actionlib
 import signal
 import sys
 import os
+import numpy as np
 import Jetson.GPIO as GPIO
 
 from pymycobot.mycobot import MyCobot
@@ -13,6 +14,7 @@ from pymycobot.utils import get_port_list
 
 from OCRVideoCapture import OCRVideoCapture
 from QRCodeScanner import QRCodeScanner
+from Transformation import homo_transform_matrix
 
 from actionlib_msgs.msg import *
 from actionlib_msgs.msg import GoalID
@@ -114,19 +116,25 @@ def pick():
     global scanner
     mc.send_angles([0,0,0,0,0,0], 60)
     time.sleep(2)
-    for i in range(1): #抓取次数
-        mc.send_angles(angle_table["pick_watch"], 50)    
+    # for i in range(1): #抓取次数
+    mc.send_angles(angle_table["pick_watch"], 50)    
+    time.sleep(1)
+    mc.send_angles(angle_table["pick_init"], 50)    
+    time.sleep(1)
 
+    print("1",mc.get_coords())
+
+    while True :
         time.sleep(1)
-        recognized_qr_texts.append(scanner.start_capture())
+        
+        recognized_qr_texts,tvecs =scanner.start_capture() # 获取QR码城市信息和tvec位移矩阵
         time.sleep(7)
+        print("recognized_qr_texts",recognized_qr_texts)
+        print("tvecs",tvecs)
 
-        if recognized_qr_texts is not None : # 写的不对，先标记
-            mc.send_angles(angle_table["pick_init"], 50)    
-            time.sleep(1)
-
+        if recognized_qr_texts is not None : 
             coords_s = mc.get_coords()
-            print(coords_s)
+            print("coords_s",coords_s)
             time.sleep(2)
             
             while coords_s is None:
@@ -135,20 +143,25 @@ def pick():
                 print("coords_s is None")
                 if coords_s is not None:
                     break
-            
-            if i ==0:
-                hight=40
-            else:
-                hight=65
 
-            coords_s[2]-=hight
-            mc.send_coords(coords_s,40,mode=1) #z轴下降
+            eye_coords[0]+=tvecs[1]
+            eye_coords[1]-=tvecs[0]
+            eye_coords[2] =100 #固定Z轴高度
+
+            # X error compensation
+            eye_coords[0] +=20
+            # Y error compensation
+            eye_coords[1] +=0
+
+            print(eye_coords)
+            mc.send_coords(eye_coords,50)
+                        
             time.sleep(2)
+
             map_navigation.pump_on()
             time.sleep(2)
             print("pump_on")
-
-            coords_s[2]+=hight        
+        
             mc.send_coords(coords_s,40,mode=1) #z轴抬高
             time.sleep(2)
 
@@ -169,10 +182,7 @@ def pick():
                 if coords_s is not None:
                     break
 
-            if i ==0:
-                hight=20
-            else:
-                hight=15
+            hight=20
 
             coords_s[2]-=hight
             mc.send_coords(coords_s,40,mode=1) #z轴下降
@@ -186,8 +196,11 @@ def pick():
 
             scanner = None
             scanner = QRCodeScanner()
+            break
+
         else:
             print("qr scanner failed")
+
 
     # 结束后复位
     mc.send_angles(angle_table["move_init"], 50)
@@ -241,16 +254,6 @@ def signal_handler(signal, frame):
 
 if __name__ == '__main__':
    
-    goal_1 = [0.4281424582004547,0.6189473509788513,-0.018068829690399985,0.9998367453707727]#中间一号点
-    goal_2 = [0.8920876979827881,0.6039064764976501,0.00469590534314955,0.9999889741757196]#中间二号点
-    goal_3 = [1.2844168424606323,0.620277214050293,0.03193667903827325,0.9994898941620202]#中间三号点
-
-    goal_4 = [0.4281424582004547,0.6189473509788513, -0.6608462641581993, 0.7433474168093117]#1号盒子姿态
-    goal_5 = [0.4281424582004547,0.6189473509788513, 0.7681211233139038, 0.7228808403015137]#2号盒子姿态
-    goal_6 = [0.8920876979827881, 0.6039064764976501, -0.6608462641581993, 0.7433474168093117]#3号盒子姿态
-    goal_7 = [0.8920876979827881, 0.6039064764976501, 0.7681211233139038, 0.7228808403015137]#4号盒子姿态
-    goal_8 = [1.2844168424606323,0.620277214050293, 0.7681211233139038, 0.7228808403015137]#5号盒子姿态
-
 ###########################################################################################################debug
 
     box_goals_1 = [
@@ -300,6 +303,8 @@ if __name__ == '__main__':
     "place_point4":[-95.36, 7.03, -22.85, -3.07, 87.89, 1.46]
     }
 
+    eye_coords=[171.5, -20.7, 154.3, -179.15, 1.32, -173.27] #相机坐标系
+
     city_to_region_mapping = {
         '北京市': '华北区',
         '天津市': '华北区',
@@ -318,7 +323,7 @@ if __name__ == '__main__':
     }
 
     boxes_with_text = []
-    recognized_ocr_texts = []
+    recognized_ocr_texts = ['华东区','华南区','华北区','华中区','东北区']
     recognized_qr_texts = []
 
     map_navigation = MapNavigation()
@@ -337,53 +342,11 @@ if __name__ == '__main__':
     running_flag = True
     signal.signal(signal.SIGINT, signal_handler)
 
-    # while running_flag:
-    #     break
-    for i in range(1):##demo
+    pick()  # 抓取
 
-        x_goal, y_goal, orientation_z, orientation_w = goal_1
-        flag_feed_goalReached = map_navigation.moveToGoal(x_goal, y_goal, orientation_z, orientation_w)
-        if flag_feed_goalReached:
-
-            x_goal, y_goal, orientation_z, orientation_w = goal_4
-            flag_feed_goalReached = map_navigation.moveToGoal(x_goal, y_goal, orientation_z, orientation_w)
-
-            time.sleep(3)
-            recognized_ocr_texts.append(ocr_capture.start_capture()) # 识别文字，打印一号盒子的变量
-
-            x_goal, y_goal, orientation_z, orientation_w = goal_5
-            flag_feed_goalReached = map_navigation.moveToGoal(x_goal, y_goal, orientation_z, orientation_w)
-
-            time.sleep(3)
-            recognized_ocr_texts.append(ocr_capture.start_capture()) # 识别文字，打印二号盒子的变量
-        else:
-            print("failed")
-
-        x_goal, y_goal, orientation_z, orientation_w = goal_2
-        flag_feed_goalReached = map_navigation.moveToGoal(x_goal, y_goal, orientation_z, orientation_w)
-        if flag_feed_goalReached:
-            x_goal, y_goal, orientation_z, orientation_w = goal_6
-            flag_feed_goalReached = map_navigation.moveToGoal(x_goal, y_goal, orientation_z, orientation_w)
-
-            time.sleep(3)
-            recognized_ocr_texts.append(ocr_capture.start_capture()) # 识别文字，打印三号盒子的变量
-
-            x_goal, y_goal, orientation_z, orientation_w = goal_7
-            flag_feed_goalReached = map_navigation.moveToGoal(x_goal, y_goal, orientation_z, orientation_w)
-
-            time.sleep(3)
-            recognized_ocr_texts.append(ocr_capture.start_capture()) # 识别文字，记下四号盒子的变量
-        else:
-            print("failed")
-
-        x_goal, y_goal, orientation_z, orientation_w = goal_3
-        flag_feed_goalReached = map_navigation.moveToGoal(x_goal, y_goal, orientation_z, orientation_w)
-        if flag_feed_goalReached:
-            x_goal, y_goal, orientation_z, orientation_w = goal_8
-            flag_feed_goalReached = map_navigation.moveToGoal(x_goal, y_goal, orientation_z, orientation_w)
-            recognized_ocr_texts.append(ocr_capture.start_capture()) # 识别文字，打印五号盒子的变量
-        else:
-            print("failed")
+    while running_flag:
+        break
+    # for i in range(1):##demo
 
     # # #######################################################记录五个导航点的信息
         for text, box_goals_1, box_goals_2,box_goals_3 in zip(recognized_ocr_texts, box_goals_1, box_goals_2,box_goals_3):
@@ -458,16 +421,20 @@ if __name__ == '__main__':
                             # 获取该区域的三个目标点
                             box_goals_1 = box["box_goals_1"]
                             box_goals_2 = box["box_goals_2"]
-                            box_goals_3 = box["box_goals_3"]
+                            # box_goals_3 = box["box_goals_3"]
 
                             # 遍历目标点和方向信息，依次导航到每个目标
-                            for target_num, goal in enumerate([box_goals_1, box_goals_2, box_goals_3], 1):
+                            # for target_num, goal in enumerate([box_goals_1, box_goals_2, box_goals_3], 1):
+                            for target_num, goal in enumerate([box_goals_1, box_goals_2], 1):
                                 # 目标坐标
                                 x_goal, y_goal, orientation_z, orientation_w = goal
 
                                 print(f"导航到{region}的目标{target_num}: x={x_goal}, y={y_goal}, 方向z={orientation_z}, 方向w={orientation_w}")
                                 flag_feed_goalReached = map_navigation.moveToGoal(x_goal, y_goal, orientation_z, orientation_w)
 
+                            print("python agv_aruco")
+                            os.system('python agv_aruco.py')    # 导航目标点
+                            
                             load()  #导航完所有点进行放盒子
                             map_navigation.pub_vel(-0.1,0,0)
                             time.sleep(5.7)

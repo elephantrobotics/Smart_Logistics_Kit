@@ -14,6 +14,18 @@ class QRCodeScanner:
         self.time_out=60
         self.cap = cv2.VideoCapture("/dev/video1") 
         self.text_color = (0, 255, 0)
+        self.camera_matrix = np.array([
+            [827.29511682, 0., 368.87666292],
+            [0.,  824.88958537, 262.03016541],
+            [0., 0., 1.]])
+
+        self.marker_size=0.027
+        self.dist_coeffs = np.array(([[0.21780081, -0.56324781, 0.01165061,   0.01845253,
+             -1.0631406]]))
+        
+        self.marker_points = np.array([[-self.marker_size/2, self.marker_size/2, 0], [self.marker_size/2, self.marker_size/2, 0],
+                                        [self.marker_size/2, -self.marker_size/2, 0], [-self.marker_size/2, -self.marker_size/2, 0]], dtype=np.float32)
+       
         if not self.cap.isOpened():
             raise Exception("无法打开摄像头")
 
@@ -35,9 +47,16 @@ class QRCodeScanner:
                     print("未找到城市信息")
                 points = obj.polygon
                 if len(points) == 4:  # 
-                    pts = np.array(points, dtype=np.int32)
-                    cv2.polylines(raw_frame, [pts], isClosed=True, color=(255, 0, 0), thickness=2)
 
+                    pts = np.array(points, dtype=np.int32)
+                    
+                    corners=(np.array([[pts[2],pts[1],pts[0],pts[3]]], dtype=np.float32))
+     
+                    cv2.polylines(raw_frame, [pts], isClosed=True, color=(255, 0, 0), thickness=2)
+                    _,rvec, tvec, = cv2.solvePnP(self.marker_points,np.float32(pts), self.camera_matrix, self.dist_coeffs)
+                    xy=[round(x * 1000, 2) for x in tvec.flatten()]
+                    # print("xy",xy)
+                    
                     x, y, w, h = cv2.boundingRect(pts)
                     pil_image = Image.fromarray(raw_frame)
                     draw = ImageDraw.Draw(pil_image)
@@ -51,7 +70,7 @@ class QRCodeScanner:
                     draw.text((text_x, text_y), qr_data, font=self.font, fill= self.text_color)
                     qr_frame = np.array(pil_image)
                    
-                    return [qr_frame,city]
+                    return [qr_frame,city,xy]
 
     def start_capture(self):
         while True:
@@ -66,7 +85,7 @@ class QRCodeScanner:
                 cv2.imshow("QR Code Scanner", result[0])
                 cv2.waitKey(1500)
                 cv2.destroyAllWindows()
-                return result[1]
+                return result[1:]
             else:
                 cv2.imshow("QR Code Scanner",frame)
             
@@ -79,15 +98,15 @@ class QRCodeScanner:
                 print("60s识别超时")
                 cv2.destroyAllWindows()
                 return -1
-    
+
     def release_resources(self):
         # 释放摄像头和窗口
         self.cap.release()
         cv2.destroyAllWindows()
 
 # 使用示例
-# if __name__ == "__main__":
-#     scanner = QRCodeScanner()
-#     for i in range(5):
-#         print(scanner.start_capture())
+if __name__ == "__main__":
+    scanner = QRCodeScanner()
+    for i in range(1):
+        print(scanner.start_capture())
    
