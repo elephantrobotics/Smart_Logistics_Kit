@@ -114,7 +114,7 @@ class MapNavigation:
 
 def pick():
     global scanner
-    for i in range(1): #i=1,快递盒子一次只吸取一个，先识别一层，分拣3次。
+    for i in range(1): #i=1,快递盒子一次只吸取一个，先识别一层
         mc.send_angles([0,0,0,0,0,0], 60)
         time.sleep(1)
         mc.send_angles(angle_table["pick_init"], 50) 
@@ -133,12 +133,12 @@ def pick():
             time.sleep(1)            
 
         while True :
-            recognized_qr_texts,tvecs =scanner.start_capture() # 获取QR码城市信息和tvec位移矩阵
+            qr_texts,tvecs =scanner.start_capture() # 获取QR码城市信息和tvec位移矩阵
             time.sleep(1)
-            print("recognized_qr_texts",recognized_qr_texts)
+            print("qr_texts",qr_texts)
             print("tvecs",tvecs)
 
-            if recognized_qr_texts is not None : 
+            if qr_texts is not None : 
                 curr_coords = mc.get_coords() # 获取当前位姿
                 print("curr_coords",curr_coords)
                 time.sleep(2)
@@ -150,7 +150,7 @@ def pick():
                     if curr_coords is not None:
                         break
 
-                mat = homo_transform_matrix(*curr_coords) @ homo_transform_matrix(-10, -45, 10, 0, 0, 0)  #矩阵乘积，mat表达了描述机械臂从当前位姿到固定位姿的变换过程的齐次变换矩阵。(-10, -45, 10, 0, 0, 0)为手眼矩阵
+                mat = homo_transform_matrix(*curr_coords) @ homo_transform_matrix(-10, -35, 10, 0, 0, 0)  #矩阵乘积，mat表达了描述机械臂从当前位姿到固定位姿的变换过程的齐次变换矩阵。(-10, -45, 10, 0, 0, 0)为手眼矩阵
                 p_end = np.vstack([np.reshape(tvecs[0], (3, 1)), 1]) # 将列表第一个二维码的tvec位移矩阵转为齐次坐标
                 p_base = np.squeeze((mat @ p_end)[:-1]).astype(int) #将转换矩阵与齐次坐标形式的二维码位移向量相乘，得到[x,y,z,1]并去除最后一个元素(齐次坐标)，最后转为整数类型。
 
@@ -159,7 +159,7 @@ def pick():
                 # Y error compensation
                 p_base[1] +=0
                 # Z轴固定高度
-                p_base[2] = 105
+                p_base[2] = 61
 
                 new_coords = np.concatenate([p_base, curr_coords[3:]]) # 将x,y,z和当前姿态进行连接成一个新数组
                 print("move_coords",new_coords)
@@ -169,7 +169,19 @@ def pick():
                 map_navigation.pump_on()
                 time.sleep(2)
                 print("pump_on")
-            
+
+                curr_coords = mc.get_coords() # 获取当前位姿
+                print("curr_coords",curr_coords)
+                time.sleep(2)
+                
+                while curr_coords is None:
+                    time.sleep(0.5)
+                    curr_coords=mc.get_coords()
+                    print("coords_s is None")
+                    if curr_coords is not None:
+                        break
+                
+                curr_coords[2]+=40  # z轴抬高
                 mc.send_coords(curr_coords,40,mode=1) #z轴抬高
                 time.sleep(2)
 
@@ -215,6 +227,7 @@ def pick():
     # 结束后复位
     mc.send_angles(angle_table["move_init"], 50)
     time.sleep(1)
+    return qr_texts
 
 def load():
     mc.send_angles([0,0,0,0,0,0], 60)
@@ -222,6 +235,24 @@ def load():
 
     mc.send_angles(angle_table["place_init"], 50)
     time.sleep(2)
+
+    coords_s = mc.get_coords() #获取当前位姿
+    print(coords_s)
+    time.sleep(2)
+    
+    while coords_s is None:
+        time.sleep(0.5)
+        coords_s=mc.get_coords()
+        print("coords_s is None")
+        if coords_s is not None:
+            break
+
+    coords_s[2]-=90
+    mc.send_coords(coords_s,40,mode=1) #z轴下降
+    time.sleep(2)
+    map_navigation.pump_on()
+    time.sleep(2)
+    print("pump_off")
 
     coords_s = mc.get_coords()
     print(coords_s)
@@ -234,15 +265,12 @@ def load():
         if coords_s is not None:
             break
 
-    coords_s[2]-=50
-    mc.send_coords(coords_s,40,mode=1) #z轴下降
+    coords_s[2]+=90
+    mc.send_coords(coords_s,40,mode=1) #z轴抬高
     time.sleep(2)
-    map_navigation.pump_on()
-    time.sleep(2)
-    print("pump_off")
 
     mc.send_angles(angle_table["place_point4"], 50)
-    time.sleep(2)
+    time.sleep(1)
 
     mc.send_angles(angle_table["place_point2"], 50)
     time.sleep(2)
@@ -292,8 +320,11 @@ if __name__ == '__main__':
 
 ###########################################################################################################
     # old_pack_goal = [1.4083706140518188,0.49778820276260376,0.00014766695622705518,0.999999989097235]
-    goal_1 = [0.8920876979827881,0.6039064764976501,-0.9997609919918943,0.021862270956683708]
-    pack_goal = [1.2083706140518188,0.35778820276260376,0.00014766695622705518,0.999999989097235]
+    goal_1 = [0.4281424582004547,0.6189473509788513,-0.018068829690399985,0.9998367453707727]#中间一号点
+    goal_2 = [0.8920876979827881,0.6039064764976501,0.00469590534314955,0.9999889741757196]#中间二号点
+    goal_3 = [1.2844168424606323,0.620277214050293,0.03193667903827325,0.9994898941620202]#中间三号点
+
+    pack_goal = [1.2083706140518188,0.29778820276260376,0.00014766695622705518,0.999999989097235]
     charge_goal =[-0.027686625719070435,0.9285135269165039,-0.6785262706093567,0.7345761363486824]
 
     pose_1 = [0.4281424582004547,0.7189473509788513,-0.018068829690399985,0.9998367453707727,0.06853892326654787]
@@ -353,11 +384,9 @@ if __name__ == '__main__':
     running_flag = True
     signal.signal(signal.SIGINT, signal_handler)
 
-    pick()
-
-    while running_flag:
-        break
-    # for i in range(1):##demo
+    # while running_flag:
+    #     break
+    for i in range(1):##demo
 
     # # #######################################################记录五个导航点的信息
         for text, box_goals_1, box_goals_2,box_goals_3 in zip(recognized_ocr_texts, box_goals_1, box_goals_2,box_goals_3):
@@ -380,28 +409,37 @@ if __name__ == '__main__':
             flag_feed_goalReached = map_navigation.moveToGoal(x_goal, y_goal, orientation_z, orientation_w)
             if flag_feed_goalReached:
 
+                # y平移2秒
+                map_navigation.pub_vel(0,-0.1,0)
+                time.sleep(2)
+                map_navigation.pub_vel(0,0,0)
+
                 print("python agv_aruco")
                 os.system('python agv_aruco.py') 
         
-                pick()  # 抓取
-                
+                recognized_qr_texts.append(pick())  # 抓取并返回识别文字
+
+                # x平移1秒
+                map_navigation.pub_vel(-0.1,0,0)
+                time.sleep(1)
+
                 # y平移2秒
                 map_navigation.pub_vel(0,0.1,0)
                 time.sleep(2.35)
                 map_navigation.pub_vel(0,0,0)
 
-                # x平移1秒
-                map_navigation.pub_vel(-0.1,0,0)
-                time.sleep(1)
                 # 旋转180°
                 map_navigation.pub_vel(0,0,-0.1)
                 time.sleep(8)
                 map_navigation.pub_vel(0,0,0)
 
+                # x平移1秒
+                map_navigation.pub_vel(0.1,0,0)
+                time.sleep(2)
+
             else:
                 print("failed")
 
-        sys.exit()
     # # #######################################################
 
     # 遍历识别到的所有市级名称，依次导航
@@ -445,6 +483,16 @@ if __name__ == '__main__':
         flag_feed_goalReached = map_navigation.moveToGoal(x_goal, y_goal, orientation_z, orientation_w)
         if flag_feed_goalReached:
             pass #回充套装
+
+            # y平移2秒
+            # map_navigation.pub_vel(0,-0.1,0)
+            # time.sleep(2)
+            # map_navigation.pub_vel(0,0,0)  
+            # x平移2秒
+            map_navigation.pub_vel(-0.1,0,0)
+            time.sleep(3.5)
+            map_navigation.pub_vel(0,0,0)
+
         else:
             print("failed")
         

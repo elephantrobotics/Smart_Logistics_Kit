@@ -324,9 +324,10 @@ def stage_slow_rot(slow_rot_times = 6):
 
     #pre read some data 
     rot_once(1,1,0)
-
+    print("start_slow_rot")
     for i in range(slow_rot_times):
         res = aruco_detector.process_qr_data()
+        print("res",res)
 
         if res != -1:
             _perc = res[2]
@@ -414,7 +415,7 @@ def main_process(first_dir = 1):
 
     print ("Step 1")
     # step 1: rotation and point
-    if stages_rot(first_dir,2,5) == 0:
+    if stages_rot(first_dir,2,5) == 0: # 向右旋转2次，向左旋转5次
         print ("initial found failed")        
         return 0
 
@@ -454,7 +455,7 @@ def main_process(first_dir = 1):
                 continue
 
             elif l < 5:
-                rot_once(1,1,0,0)
+                # rot_once(1,1,0,0)
                 break
                 
         else:#获取不到aruco二维码信息就退出循环

@@ -1,4 +1,4 @@
-# coding=utf8
+#coding=UTF-8
 import numpy as np
 import math
 import time
@@ -62,7 +62,7 @@ cv2.namedWindow("show",cv2.WINDOW_AUTOSIZE)
 
 # importing aruco dictionary
 
-marker_length = 0.032   # -- Here, the measurement unit is metre.0.055 is for orgianl big
+marker_length = 0.04   # -- Here, the measurement unit is metre.0.055 is for orgianl big
 
 # use to get the attitude in terms of euler 321
 R_flip = np.zeros((3, 3), dtype=np.float32)
@@ -256,6 +256,7 @@ def getArucoCode(display_mode = True ):
     
 def process_qr_data():
     data_ = getArucoCode(True)
+    # print("data_",data_)
     
     if data_ is not None:
         if data_[0] == []:
