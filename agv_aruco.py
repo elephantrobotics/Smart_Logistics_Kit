@@ -320,7 +320,7 @@ def stage_quick_rot(fir_dir = 1, first_rot_times = 3, second_rot_times = 6):
 def stage_slow_rot(slow_rot_times = 6):
     _dir = 1
     sp = 0.5
-    time_gap = 0.40
+    time_gap = 0.50 #旋转的时间
 
     #pre read some data 
     rot_once(1,1,0)

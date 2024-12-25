@@ -55,6 +55,7 @@ class QRCodeScanner:
                     cv2.polylines(raw_frame, [pts], isClosed=True, color=(255, 0, 0), thickness=2)
                     _,rvec, tvec, = cv2.solvePnP(self.marker_points,np.float32(pts), self.camera_matrix, self.dist_coeffs)
                     xy=[round(x * 1000, 2) for x in tvec.flatten()]
+                    tvec=tvec.T.reshape(1,1,3)
                     # print("xy",xy)
                     
                     x, y, w, h = cv2.boundingRect(pts)
@@ -70,7 +71,7 @@ class QRCodeScanner:
                     draw.text((text_x, text_y), qr_data, font=self.font, fill= self.text_color)
                     qr_frame = np.array(pil_image)
                    
-                    return [qr_frame,city,xy]
+                    return [qr_frame,city,tvec]
 
     def start_capture(self):
         while True:
@@ -93,7 +94,7 @@ class QRCodeScanner:
                 if cv2.waitKey(1) & 0xFF == ord('q'):
                     cv2.destroyAllWindows()
                     break
-            print(time.time()-self.start_time)
+            # print(time.time()-self.start_time)
             if time.time()-self.start_time>self.time_out:
                 print("60s识别超时")
                 cv2.destroyAllWindows()
