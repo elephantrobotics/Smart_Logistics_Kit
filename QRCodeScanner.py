@@ -32,6 +32,7 @@ class QRCodeScanner:
     def scan_qrcode_from_camera(self,raw_frame):
 
         decoded_objects = decode(raw_frame)
+        city = "未知城市"  # 给city一个默认值，防止未赋值时引用
         if decoded_objects:
             
             for obj in decoded_objects:

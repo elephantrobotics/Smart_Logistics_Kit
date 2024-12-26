@@ -12,11 +12,11 @@ print("find csi camera")
 
 def gstreamer_pipeline(
     sensor_id=0,
-    capture_width=1920,
-    capture_height=1080,
+    capture_width=3264,
+    capture_height=2464,
     display_width=960,
     display_height=540,
-    framerate=30,
+    framerate=21,
     flip_method=0,
 ):
     return (
@@ -77,9 +77,6 @@ pose_data_dict = {}
 x = 0
 y = 0
 theta = 0
-
-
-
 
 def _is_rotation_matrix(R):
         """
@@ -153,10 +150,11 @@ def _detect(corners, ids, imgWithAruco):
                 rvec, tvec, _ = cv2.aruco.estimatePoseSingleMarkers(
                     corners, marker_length, camera_matrix,
                     dist_coeffs)
+                # for rvec, tvec in zip(rvec, tvec):
+                #     cv2.drawFrameAxes(imgWithAruco, camera_matrix,dist_coeffs, rvec, tvec, marker_length)
                 for i in range(rvec.shape[0]):
-                    cv2.drawFrameAxes(imgWithAruco, camera_matrix,
-                                        dist_coeffs, rvec, tvec,
-                                        marker_length)
+                    imgWithAruco = cv2.drawFrameAxes(imgWithAruco, camera_matrix,dist_coeffs, rvec, tvec,marker_length)
+
                     frame_makers =   aruco.drawDetectedMarkers(imgWithAruco.copy(),corners)
 
                 # --- The midpoint displays the ID number
@@ -214,41 +212,39 @@ def displayFrame(frame_input):
     cv2.imshow("show", frame_input)
     cv2.waitKey(1)
 
-
 def getArucoCode(display_mode = True ):
     #while True: 
         # read frame once
-    ret, frame = cam.read()
-    frame = cv2.flip(frame,-1)
-    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    aruco_dict = cv2.aruco.getPredefinedDictionary(aruco.DICT_6X6_250)
+    frame_makers = None
+    ret, frame = cam.read() #获取相机的数据流
+    frame = cv2.flip(frame,-1) #垂直镜像翻转
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY) #灰度化
+    aruco_dict = cv2.aruco.getPredefinedDictionary(aruco.DICT_6X6_250) #设置预定义的字典
     
-    parameters = cv2.aruco.DetectorParameters()
+    parameters = cv2.aruco.DetectorParameters() #使用默认值初始化检测器参数
     
-
-    corners, ids, rejectedImgPoints = aruco.detectMarkers(
-        gray, aruco_dict, parameters=parameters)
-    frame_makers =   aruco.drawDetectedMarkers(frame.copy(),corners,ids)
-
+    corners, ids, rejectedImgPoints = aruco.detectMarkers(gray, aruco_dict, parameters=parameters) #使用aruco.detectMarkers()函数可以检测到marker，返回ID和标志板的4个角点坐标
 
     if ids is not None:
+        frame_makers = aruco.drawDetectedMarkers(frame.copy(),corners,ids)
         ids_len  = len(ids)
 
         res = []
         i =0
         if ids_len > 0:
             for l in range(ids_len):
-                aruco_res = _detect(corners[i:i+1], ids[i][0], frame)
+                aruco_res = _detect(corners[i:i+1], ids[i][0], frame) #输入四个角点坐标，计算并返回x,y,z (units is cm), roll, pitch, yaw (units is degree),Aruco id
                 if aruco_res != None:
                     res.append(aruco_res)
                 i+=1
                 if display_mode :
-                    displayFrame(frame_makers)
+                    displayFrame(frame_makers) #
         return (res, ids)
         #print res
 
     else:
         # no data detected
+        frame_makers = frame.copy()
         if display_mode :
             displayFrame(frame_makers)
         return None
@@ -257,27 +253,17 @@ def getArucoCode(display_mode = True ):
 def process_qr_data():
     data_ = getArucoCode(True)
     # print("data_",data_)
+    # 例子：data_ ([[13.190542591653859, 0.6577785493956305, 30.57489950772101, 56.677235927555834, -10.703176777425517, -17.524720968623765, (892, 292)]], array([[2]], dtype=int32))
     
     if data_ is not None:
         if data_[0] == []:
-            return -1
+            print("can't not dectet pose estimation of Aruco ")
+            return -1   #二维码的marker_length要大，而且marker_length参数要给对,不然没有位姿信息
 
         _z = data_[0][0][2]
         _ry = data_[0][0][4]
-        _perc = data_[0][0][6][0]/640.0
-        return (_z, _ry, _perc)
+        _perc = data_[0][0][6][0]/960.0 # 归一化[0,1],(892, 292)为二维码中心点坐标
+        return (_z, _ry, _perc) # 返回深度z,pitch,画面分辨率(960)的中心点
     else:
         return -1
-
-'''
-time_1 = time.time()
-while True:
-    #continue
-    time_gap = (time.time()-time_1)
-    if time_gap > 1 :
-        #print ("bigger than once ")
-        time_1 = time.time()
-'''	
-
-
 
