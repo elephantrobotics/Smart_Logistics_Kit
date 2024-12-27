@@ -5,11 +5,6 @@ import time
 import cv2
 import cv2.aruco as aruco
 
-from std_msgs.msg import Int8
-from geometry_msgs.msg import Twist
-
-print("find csi camera")
-
 def gstreamer_pipeline(
     sensor_id=0,
     capture_width=3264,
@@ -39,28 +34,33 @@ def gstreamer_pipeline(
 
 cam = cv2.VideoCapture(gstreamer_pipeline(flip_method=0), cv2.CAP_GSTREAMER)
 
-dist_coeffs = np.array(([[3.41360787e-01, -2.52114260e+00, -1.28012469e-03,  6.70503562e-03,
-             2.57018000e+00]]))
-print(dist_coeffs)
-
 font = cv2.FONT_HERSHEY_SIMPLEX  # font for displaying text (below)
 ret, frame = cam.read()
 frame = cv2.flip(frame,-1)
+
 width = cam.get(cv2.CAP_PROP_FRAME_WIDTH)
 height = cam.get(cv2.CAP_PROP_FRAME_WIDTH)
 count = cam.get(cv2.CAP_PROP_FRAME_COUNT)
 fps = cam.get(cv2.CAP_PROP_FPS)
+
+print(f"Width: {width}, Height: {height}, Count: {count}, FPS: {fps}") # 960,960,-1,21
+
 size = frame.shape
 focal_length = size[1]
 center = (size[1] / 2, size[0] / 2)
-# Camera internals
-camera_matrix = np.array([[focal_length, 0, center[0]], [0, focal_length, center[1]],[0, 0, 1]], dtype="double")
+
+# Camera internals 摄像头的内部参数矩阵
+camera_matrix = np.array([[focal_length, 0, center[0]], 
+                          [0, focal_length, center[1]],
+                          [0, 0, 1]], 
+                          dtype="double")
+
+# 畸变系数矩阵
+dist_coeffs = np.array(([[3.41360787e-01, -2.52114260e+00, -1.28012469e-03,  6.70503562e-03, 2.57018000e+00]]))
 
 print(camera_matrix,dist_coeffs)
 
 cv2.namedWindow("show",cv2.WINDOW_AUTOSIZE)
-
-# importing aruco dictionary
 
 marker_length = 0.04   # -- Here, the measurement unit is metre.0.055 is for orgianl big
 
@@ -147,11 +147,7 @@ def _detect(corners, ids, imgWithAruco):
             cv2.putText(imgWithAruco, 'C4', x4, font, 1, (255, 255, 255), 1,
                         cv2.LINE_AA)
             if ids is not None:   # if aruco marker detected
-                rvec, tvec, _ = cv2.aruco.estimatePoseSingleMarkers(
-                    corners, marker_length, camera_matrix,
-                    dist_coeffs)
-                # for rvec, tvec in zip(rvec, tvec):
-                #     cv2.drawFrameAxes(imgWithAruco, camera_matrix,dist_coeffs, rvec, tvec, marker_length)
+                rvec, tvec, _ = cv2.aruco.estimatePoseSingleMarkers(corners, marker_length, camera_matrix,dist_coeffs)
                 for i in range(rvec.shape[0]):
                     imgWithAruco = cv2.drawFrameAxes(imgWithAruco, camera_matrix,dist_coeffs, rvec, tvec,marker_length)
 
@@ -173,8 +169,7 @@ def _detect(corners, ids, imgWithAruco):
                 R_ct = np.matrix(cv2.Rodrigues(rvec)[0])
                 R_tc = R_ct.T
                 # -- Get the attitude in terms of euler 321 (Needs to be flipped first)
-                roll_marker, pitch_marker, yaw_marker = _rotation_matrix_to_euler_angles(
-                    R_flip * R_tc)
+                roll_marker, pitch_marker, yaw_marker = _rotation_matrix_to_euler_angles(R_flip * R_tc)
                 # -- Print the marker's attitude respect to camera frame
                 str_attitude = "MARKER Attitude degrees r=%.4f  p=%.4f  y=%.4f" % (
                     math.degrees(roll_marker), math.degrees(pitch_marker),
@@ -207,7 +202,6 @@ def _detect(corners, ids, imgWithAruco):
             pose_data_dict[0] = pose_data
             return None
 
-
 def displayFrame(frame_input):
     cv2.imshow("show", frame_input)
     cv2.waitKey(1)
@@ -238,9 +232,8 @@ def getArucoCode(display_mode = True ):
                     res.append(aruco_res)
                 i+=1
                 if display_mode :
-                    displayFrame(frame_makers) #
+                    displayFrame(frame_makers)
         return (res, ids)
-        #print res
 
     else:
         # no data detected
@@ -267,3 +260,6 @@ def process_qr_data():
     else:
         return -1
 
+
+if __name__=='__main__':
+    pass

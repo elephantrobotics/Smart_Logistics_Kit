@@ -112,9 +112,9 @@ class MapNavigation:
         time.sleep(0.05)
         GPIO.output(19, GPIO.HIGH)
 
-def pick(angle_watch,box_height):
+def pick(angle_watch,box_height,pick_times=1):
     global scanner 
-    for i in range(1): #i=1,快递盒子一次只吸取一个，先识别一层
+    for i in range(pick_times): #i=1,快递盒子一次只吸取一个，先识别一层
         mc.send_angles([0,0,0,0,0,0], 60)
         time.sleep(1)
         mc.send_angles(angle_table["pick_init"], 50) 
@@ -300,16 +300,7 @@ if __name__ == '__main__':
         [1.2844168424606323,0.620277214050293, 0.7681211233139038, 0.7228808403015137]#5号盒子姿态
     ]
 
-    box_goals_3 = [
-        [0.4281424582004547,0.4972758960723877,  -0.7108462641581993, 0.7033474168093117],
-        [0.4281424582004547,1.1370172500610352, 0.7681211233139038, 0.7228808403015137],
-        [0.8920876979827881,0.4972758960723877, -0.7108462641581993, 0.7033474168093117],
-        [0.8920876979827881,1.1370172500610352, 0.7681211233139038, 0.7228808403015137],
-        [1.2844168424606323,1.1792559623718262, 0.7681211233139038, 0.7228808403015137]
-    ]
-
 ###########################################################################################################
-    # old_pack_goal = [1.4083706140518188,0.49778820276260376,0.00014766695622705518,0.999999989097235]
     goal_1 = [0.4281424582004547,0.6189473509788513,-0.018068829690399985,0.9998367453707727]#中间一号点
     goal_2 = [0.8920876979827881,0.6039064764976501,0.00469590534314955,0.9999889741757196]#中间二号点
     goal_3 = [1.2844168424606323,0.620277214050293,0.03193667903827325,0.9994898941620202]#中间三号点
@@ -317,9 +308,6 @@ if __name__ == '__main__':
     pack_goal = [1.2083706140518188,0.29778820276260376,0.00014766695622705518,0.999999989097235]
     charge_goal =[-0.027686625719070435,0.9285135269165039,-0.6785262706093567,0.7345761363486824]
 
-    pose_1 = [0.4281424582004547,0.7189473509788513,-0.018068829690399985,0.9998367453707727,0.06853892326654787]
-    pose_2 = [0.8920876979827881,0.7039064764976501,0.00469590534314955,0.9999889741757196,0.06853892326654787]
-    pose_3 = [1.4844168424606323,0.820277214050293,0.03193667903827325,0.9994898941620202,0.06853892326654787]
     pack_pose = [1.7001869678497314,0.28472626209259033,0.009679434542179345,0.9999531531761594,0.06853892326654787]
     charge_pose = [-0.027686625719070435,0.9285135269165039,-0.6785262706093567,0.7345761363486824,0.06853892326654787]
     
@@ -327,10 +315,10 @@ if __name__ == '__main__':
     "zero_position":[0,0,0,0,0,0],
     "move_init":[90.06, -30.41, 22.14, -1.05, 87.45, 0.39],
     "pick_init":[5.44, 6.5, -13.09, -2.54, 81.82, -4.3],
-    # "pick_watch1":[-21.05, 38.23, -39.99, -1.05, 86.48, -6.5],  #相机拍照位1,右侧的快递盒子
     "pick_watch1":[-38.05, 43.41, -34.54, 0.87, 71.71, -36.29],  #相机拍照位1,右侧的快递盒子
     "pick_watch2":[1.05, 38.23, -39.99, -1.05, 86.48, -6.5],    #相机拍照位2,中心点快递盒子
-    "pick_watch3":[21.05, 38.23, -39.99, -1.05, 86.48, -6.5],   #相机拍照位3,左侧的快递盒子
+    # "pick_watch3":[21.05, 38.23, -39.99, -1.05, 86.48, -6.5],   #相机拍照位3,左侧的快递盒子
+    "pick_watch3":[14.06, 46.23, -31.46, -3.25, 71.54, 13.27],   #相机拍照位3,左侧的快递盒子
     "pick_point2":[-57.91, 0.61, -8.34, 6.32, 19.24, -2.19],    #抓取过渡点
     "place_init":[-95.71, 22.41, -25.04, -3.07, 95.27, 1.4],
     "place_point2":[-7.11, -5.62, -14.85, 0.87, 77.95, -10.37],
@@ -369,23 +357,22 @@ if __name__ == '__main__':
 
     # while running_flag:
     #     break
-    for i in range(6):##demo
 
     # # #######################################################记录五个导航点的信息
-        for text, box_goals_1, box_goals_2,box_goals_3 in zip(recognized_ocr_texts, box_goals_1, box_goals_2,box_goals_3):
-            box_info = {
-                "text": text,
-                "box_goals_1": box_goals_1,
-                "box_goals_2": box_goals_2,
-                "box_goals_3": box_goals_3,
-            }
-            boxes_with_text.append(box_info)
+    for text, box_goals_1, box_goals_2 in zip(recognized_ocr_texts, box_goals_1, box_goals_2):
+        box_info = {
+            "text": text,
+            "box_goals_1": box_goals_1,
+            "box_goals_2": box_goals_2,
+        }
+        boxes_with_text.append(box_info)
+    
+    for box in boxes_with_text:
+        print(box)
         
-        for box in boxes_with_text:
-            print(box)
-  
     # ########################################################
-        x_goal, y_goal, orientation_z, orientation_w = goal_1
+    for i in range(5):##demo 循环5次,每次只抓一个盒子,然后对盒子进行分拣
+        x_goal, y_goal, orientation_z, orientation_w = goal_1 #先导航到该点，避免撞到快递放置盒
         flag_feed_goalReached = map_navigation.moveToGoal(x_goal, y_goal, orientation_z, orientation_w)
         if flag_feed_goalReached:
             x_goal, y_goal, orientation_z, orientation_w = pack_goal
@@ -401,21 +388,25 @@ if __name__ == '__main__':
                 os.system('python agv_aruco.py') 
 
                 xGoal, yGoal, orientation_z, orientation_w,covariance = pack_pose
-                map_navigation.set_pose(xGoal, yGoal, orientation_z, orientation_w,covariance)
+                map_navigation.set_pose(xGoal, yGoal, orientation_z, orientation_w,covariance) #amcl重定位
 
-                # 根据循环次数抓取
+                # 根据循环次数抓取,固定相机拍照位和吸取高度
                 if i == 0:
                     angle_pick = angle_table["pick_watch1"]
+                    box_height = 61
                 elif i == 1:
                     angle_pick = angle_table["pick_watch2"]
-                elif i == 2:
-                    angle_pick = angle_table["pick_watch3"]
-                
-                if i < 2:
                     box_height = 101
-                else :
+                elif i == 2:
+                    angle_pick = angle_table["pick_watch2"]
                     box_height = 61
-
+                elif i == 3:
+                    angle_pick = angle_table["pick_watch3"]
+                    box_height = 101
+                elif i == 4:
+                    angle_pick = angle_table["pick_watch3"]
+                    box_height = 61
+              
                 recognized_qr_texts.append(pick(angle_pick,box_height))  # 发送拍照相机关节角度和Z轴高度，抓取并返回识别文字
 
                 # x平移1秒
@@ -441,38 +432,36 @@ if __name__ == '__main__':
 
     # # #######################################################
     # 遍历识别到的所有市级名称，依次导航
-        if recognized_qr_texts: #recognized_qr_texts = ['上海市', '天津市']  # 通过 OCR 获取的市级列表
+        if recognized_qr_texts: #recognized_qr_texts = ['上海市', '南京市','武汉市','北京市','大连市']  # 通过 OCR 获取的市级列表
             print("recognized_ocr_texts:",recognized_ocr_texts) #debug
-            print("recognized_qr_texts:",recognized_qr_texts)   #debug
-            for city in recognized_qr_texts: # '上海市', '天津市' 循环导航两次，'上海市'则导航一次 # 还有逻辑BUG,只会去第一个城市
-                print(f"识别到的城市：{city}") # '上海市'
-                region = city_to_region_mapping.get(city, "未知区域") # 上海市：华东区，返回华东区
-                if region != "未知区域":
-                    # 查找与该区域对应的目标位置
-                    for box in boxes_with_text:
-                        if box["text"] == region:
+            print("recognized_qr_texts:",recognized_qr_texts)   #debug 
+            # 获取列表中的最后一个城市
+            last_city = recognized_qr_texts[-1]
+            region = city_to_region_mapping.get(last_city, "未知区域") # 上海市：华东区，返回华东区
+            if region != "未知区域":
+                # 查找与该区域对应的目标位置
+                for box in boxes_with_text:
+                    if box["text"] == region:
 
-                            # 获取该区域的三个目标点
-                            box_goals_1 = box["box_goals_1"]
-                            box_goals_2 = box["box_goals_2"]
-                            # box_goals_3 = box["box_goals_3"]
+                        # 获取该区域的两个个目标点
+                        box_goals_1 = box["box_goals_1"]
+                        box_goals_2 = box["box_goals_2"]
 
-                            # 遍历目标点和方向信息，依次导航到每个目标
-                            # for target_num, goal in enumerate([box_goals_1, box_goals_2, box_goals_3], 1):
-                            for target_num, goal in enumerate([box_goals_1, box_goals_2], 1):
-                                # 目标坐标
-                                x_goal, y_goal, orientation_z, orientation_w = goal
+                        # 遍历目标点和方向信息，依次导航到每个目标
+                        for target_num, goal in enumerate([box_goals_1, box_goals_2], 1):
+                            # 目标坐标
+                            x_goal, y_goal, orientation_z, orientation_w = goal
 
-                                print(f"导航到{region}的目标{target_num}: x={x_goal}, y={y_goal}, 方向z={orientation_z}, 方向w={orientation_w}")
-                                flag_feed_goalReached = map_navigation.moveToGoal(x_goal, y_goal, orientation_z, orientation_w)
+                            print(f"导航到{region}的目标{target_num}: x={x_goal}, y={y_goal}, 方向z={orientation_z}, 方向w={orientation_w}")
+                            flag_feed_goalReached = map_navigation.moveToGoal(x_goal, y_goal, orientation_z, orientation_w)
 
-                            print("python agv_aruco")
-                            os.system('python agv_aruco.py')    # 导航目标点
-                            
-                            load()  #导航完所有点进行放盒子
-                            map_navigation.pub_vel(-0.1,0,0)
-                            time.sleep(5.7)
-                            map_navigation.pub_vel(0,0,0)
+                        print("python agv_aruco")
+                        os.system('python agv_aruco.py')    # 导航目标点
+                        
+                        load()  #导航完所有点进行放盒子
+                        map_navigation.pub_vel(-0.1,0,0)
+                        time.sleep(5.7)
+                        map_navigation.pub_vel(0,0,0)
       
     # #######################################################
     # # 充电区离墙太近了，里程计误差，导航容易卡在该点位

@@ -1,13 +1,11 @@
 # coding=utf8
-from pickle import TRUE
-
-import math
+import rospy
 import time
 import threading
 import numpy as np
 import aruco_detector
 
-import rospy
+from pickle import TRUE
 from std_msgs.msg import Int8
 from geometry_msgs.msg import Twist
 
@@ -19,12 +17,10 @@ _id_get = 0
 
 rospy.init_node('qcode_detect', anonymous=True)
 rate = rospy.Rate(30)
-
 pub = rospy.Publisher('/cmd_vel', Twist, queue_size=10)
 
 def pub_vel(x, y , theta):
     twist = Twist()
-
     twist.linear.x = x
     twist.linear.y = y
     twist.linear.z = 0
@@ -171,6 +167,52 @@ def move_to_center():
         print ("miss target")
         return 0
 
+def control_robot(depth_lock, qr_depth):
+    while True:
+        with depth_lock:  # 使用锁来保证对共享数据 qr_depth 的安全访问
+            l = qr_depth["distance"]  # 获取共享的二维码深度
+            print(f"获取到的深度：{l}")
+
+        if l < 5:
+            # 如果距离小于5，停止运动
+            print("二维码太近，停止小车")
+            pub_vel(0, 0, 0)  # 停止小车运动
+            break
+        elif 5 <= l < 10:
+            # 如果距离在 5 到 10 之间，前进
+            print("前进 0.21 秒")
+            front_once(0.21, sp=0.01)
+        elif 10 <= l < 30:
+            # 如果距离在 10 到 30 之间，前进
+            print("前进 1.9 秒")
+            front_once(1.9, sp=0.01)
+        elif l >= 30:
+            # 如果距离大于 30，前进
+            print("前进 2 秒")
+            front_once(2, sp=0.01)
+
+        # 控制循环频率，可以设置为每0.1秒获取一次数据
+        time.sleep(0.1)
+
+def get_qr_distance(depth_lock, qr_depth):
+    while True:
+        # 这部分代码获取二维码信息，更新深度
+        res = aruco_detector.process_qr_data()  # 获取二维码数据
+        if res != -1:
+            l = res[0]  # 距离
+            ag = res[1]  # 角度
+
+            # 使用锁来更新共享的二维码深度
+            with depth_lock:
+                qr_depth["distance"] = l  # 更新二维码的深度
+
+            print(f"二维码深度更新为：{l}, 角度为：{ag}")
+        else:
+            print("Can't detect aruco.")
+        
+        # 控制频率，可以设置为每0.1秒获取一次数据
+        time.sleep(0.1)
+
 def main_process(first_dir = 1):
 
     #setup camera
@@ -205,8 +247,8 @@ def main_process(first_dir = 1):
                     stages_rot(1,2,4)   #没对齐二维码旋转对齐   
 
             elif 10 < l < 30 :      
-                if stage_slow_rot(6):   #如果对齐二维码
-                    front_once(1.9,0.01)  #前进
+                if stage_slow_rot(6):   #如果对齐二维码如果此时扫描不到二维码还是会前进
+                    front_once(1.9,0.01)  #前进#bug不及时
                     continue
                 else:
                     stages_rot(1,2,4)   #没对齐二维码旋转对齐
@@ -227,6 +269,26 @@ def main_process(first_dir = 1):
             break
     
     rot_once(1,1,0,0) #停止运动
+
+###################################################################################################debug
+    # # 定义共享数据和锁
+    # qr_depth = {"distance": 0}  # 用字典存储二维码的深度
+    # depth_lock = threading.Lock()  # 创建一个锁，用于同步对共享数据的访问
+
+    # # 开启线程来实时获取二维码的深度信息
+    # qr_thread = threading.Thread(target=get_qr_distance, args=(depth_lock, qr_depth))
+    # qr_thread.daemon = True  # 设置为守护线程，主线程退出时会自动退出
+    # qr_thread.start()
+
+    # # 开启线程来实时控制小车运动
+    # control_thread = threading.Thread(target=control_robot, args=(depth_lock, qr_depth))
+    # control_thread.daemon = True  # 设置为守护线程，主线程退出时会自动退出
+    # control_thread.start()
+
+    # # 主线程可以做其他工作，或者等待两个子线程结束
+    # qr_thread.join()  # 阻塞主线程，直到获取二维码的线程结束
+    # control_thread.join()  # 阻塞主线程，直到控制小车的线程结束
+###################################################################################################
 
 if __name__=='__main__':
     try:
