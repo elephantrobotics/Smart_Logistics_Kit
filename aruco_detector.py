@@ -59,6 +59,10 @@ camera_matrix = np.array([[focal_length, 0, center[0]],
 dist_coeffs = np.array(([[3.41360787e-01, -2.52114260e+00, -1.28012469e-03,  6.70503562e-03, 2.57018000e+00]]))
 
 print(camera_matrix,dist_coeffs)
+# Width: 960.0, Height: 960.0, Count: -1.0, FPS: 21.0
+# [[960.   0. 480.]
+#  [  0. 960. 270.]
+#  [  0.   0.   1.]] [[ 3.41360787e-01 -2.52114260e+00 -1.28012469e-03  6.70503562e-03 2.57018000e+00]]
 
 cv2.namedWindow("show",cv2.WINDOW_AUTOSIZE)
 
@@ -163,8 +167,7 @@ def _detect(corners, ids, imgWithAruco):
                 rvec = rvec[0][0]
                 tvec = tvec[0][0]
                 # --- Print the tag position in camera frame
-                str_position = "MARKER Position x=%.4f (cm)  y=%.4f (cm)  z=%.4f (cm)" % (
-                    tvec[0] * 100, tvec[1] * 100, tvec[2] * 100)
+                str_position = "MARKER Position x=%.4f (cm)  y=%.4f (cm)  z=%.4f (cm)" % (tvec[0] * 100, tvec[1] * 100, tvec[2] * 100)
                 # -- Obtain the rotation matrix tag->camera
                 R_ct = np.matrix(cv2.Rodrigues(rvec)[0])
                 R_tc = R_ct.T

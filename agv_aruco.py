@@ -241,14 +241,18 @@ def main_process(first_dir = 1):
 
             if 30 < l:
                 if stage_slow_rot(6):   #如果对齐二维码
-                    front_once(2,0.01)#前进时间长
+                    res = aruco_detector.process_qr_data() #获取aruco二维码信息
+                    if res != -1:
+                        front_once(2,0.01)#前进时间长
                     continue
                 else:
                     stages_rot(1,2,4)   #没对齐二维码旋转对齐   
 
             elif 10 < l < 30 :      
-                if stage_slow_rot(6):   #如果对齐二维码如果此时扫描不到二维码还是会前进
-                    front_once(1.9,0.01)  #前进#bug不及时
+                if stage_slow_rot(6):   #如果对齐二维码
+                    res = aruco_detector.process_qr_data() #获取aruco二维码信息
+                    if res != -1:
+                        front_once(1.9,0.01)  #前进 bug如果此时扫描不到二维码还是会前进
                     continue
                 else:
                     stages_rot(1,2,4)   #没对齐二维码旋转对齐
