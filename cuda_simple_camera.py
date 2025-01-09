@@ -9,7 +9,7 @@ class CameraProcessor:
     def __init__(self, camera_matrix, dist_matrix, marker_length=0.04):
         self.frame_queue_capture = queue.Queue(maxsize=2)  # 用于捕获帧
         self.frame_queue_process = queue.Queue(maxsize=2)  # 用于处理帧
-        self.pose_data = [None, None, None, None, None, None]
+        self.pose_data = [None, None, None, None, None, None, None]
         self.pose_data_dict = {}
         
         self.camera_matrix = camera_matrix
@@ -102,25 +102,22 @@ class CameraProcessor:
                 R_tc = R_ct.T
                 roll_marker, pitch_marker, yaw_marker = self._rotation_matrix_to_euler_angles(self.R_flip * R_tc)
 
-                self.pose_data[0] = tvec[0] * 100
-                self.pose_data[1] = tvec[1] * 100
-                self.pose_data[2] = tvec[2] * 100
-                self.pose_data[3] = math.degrees(roll_marker)
-                self.pose_data[4] = math.degrees(pitch_marker)
-                self.pose_data[5] = math.degrees(yaw_marker)
-
-                self.pose_data_dict[ids] = self.pose_data
-
-                roll_deg = math.degrees(roll_marker)
-                pitch_deg = math.degrees(pitch_marker)
                 yaw_deg = math.degrees(yaw_marker)
 
                 if abs(yaw_deg) % 90.0 < 30:
-                    return [tvec[0] * 100, tvec[1] * 100, tvec[2] * 100, roll_deg, pitch_deg, yaw_deg, cornerMid]
-                else:
-                    return None
-        else:
-            return None
+                    self.pose_data[0] = tvec[0] * 100
+                    self.pose_data[1] = tvec[1] * 100
+                    self.pose_data[2] = tvec[2] * 100
+                    self.pose_data[3] = math.degrees(roll_marker)
+                    self.pose_data[4] = math.degrees(pitch_marker)
+                    self.pose_data[5] = math.degrees(yaw_marker)
+                    self.pose_data[6] = cornerMid
+
+                    self.pose_data_dict[ids] = self.pose_data
+
+                    roll_deg = math.degrees(roll_marker)
+                    pitch_deg = math.degrees(pitch_marker)
+
 
     def capture_frames(self, cap):
         while True:
@@ -155,9 +152,6 @@ class CameraProcessor:
                         _z = res[0][2]
                         _ry = res[0][4]
                         _perc = res[0][6][0] / 960.0  # 归一化[0,1]
-                        print("Z:", _z)
-                        print("ry", _ry)
-                        print("perc", _perc)
                         
                 # 将处理后的图像放入处理队列
                 if not self.frame_queue_process.full():

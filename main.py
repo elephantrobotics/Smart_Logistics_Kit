@@ -9,7 +9,7 @@ import os
 import numpy as np
 import Jetson.GPIO as GPIO
 
-from pymycobot.mycobot import MyCobot
+from pymycobot.mecharm270 import MechArm270
 from pymycobot.utils import get_port_list
 
 from OCRVideoCapture import OCRVideoCapture
@@ -115,11 +115,6 @@ class MapNavigation:
 def pick(angle_watch,box_height,pick_times=1):
     global scanner 
     for i in range(pick_times): #i=1,快递盒子一次只吸取一个，先识别一层
-        mc.send_angles([0,0,0,0,0,0], 60)
-        time.sleep(1)
-        mc.send_angles(angle_table["pick_init"], 50) 
-        time.sleep(1)
-
         mc.send_angles(angle_watch, 50) # 相机拍照位 
         time.sleep(1)
 
@@ -148,13 +143,13 @@ def pick(angle_watch,box_height,pick_times=1):
                 # X error compensation
                 p_base[0] +=0
                 # Y error compensation
-                p_base[1] +=0
+                p_base[1] +=10
                 # Z轴固定高度
                 p_base[2] = box_height
 
                 new_coords = np.concatenate([p_base, curr_coords[3:]]) # 将x,y,z和当前姿态进行连接成一个新数组
-                print("move_coords",new_coords)
-                mc.send_coords(new_coords,50)
+                print("move_coords",list(new_coords))
+                mc.send_coords(list(new_coords),30,1)
                 time.sleep(2)
 
                 map_navigation.pump_on()
@@ -299,18 +294,18 @@ if __name__ == '__main__':
     ]
 
     goal_1 = [-0.7349843764305115,0.24553439617156982,0.8816407909804326,0.471921090521919]#中间一号点,姿态朝前
-    pack_goal = [-1.2081263065338135,1.705761194229126,0.8939602462119096,0.4481462687479858]
+    pack_goal = [-1.5727944374084473,1.5765453577041626,0.3845709618323087,0.9230954313154046]#快递分拣盒附近
     charge_goal =[-1.003286600112915,-0.6634970903396606,0.27711757476357934,0.9608360160595314]
 
-    pack_pose = [-1.3941116333007812,2.1765429973602295,0.8753653894316548,0.4834619271309452,0.06853892326654787]
+    pack_pose = [-1.5043163299560547,2.357182264328003,0.2875093576208822,0.9577778287684612,0.06853892326654787]
 
     angle_table = {
     "zero_position":[0,0,0,0,0,0],
     "move_init":[90.06, -30.41, 22.14, -1.05, 87.45, 0.39],
     "pick_init":[5.44, 6.5, -13.09, -2.54, 81.82, -4.3],
-    "pick_watch1":[-38.14, 38.75, -33.39, 3.86, 74.79, -41.48],  #相机拍照位1,右侧的快递盒子
-    "pick_watch2":[-9.84, 25.83, -24.96, 4.3, 79.1, -9.84],    #相机拍照位2,中心点快递盒子
-    "pick_watch3":[29.0, 55.89, -60.29, -5.44, 86.48, 28.82],   #相机拍照位3,左侧的快递盒子
+    # "pick_watch1":[-38.14, 38.75, -33.39, 3.86, 74.79, -41.48],  #相机拍照位1,右侧的快递盒子
+    "pick_watch":[94.21, 11.6, -19.51, -0.26, 77.08, -0.26],    #相机拍照位2,中心点快递盒子
+    # "pick_watch3":[29.0, 55.89, -60.29, -5.44, 86.48, 28.82],   #相机拍照位3,左侧的快递盒子
     "pick_point2":[-57.91, 0.61, -8.34, 6.32, 19.24, -2.19],    #抓取过渡点
     "place_init":[-93.6, 1.93, 6.24, -0.17, 68.81, -6.24],
     "place_point2":[-7.11, -5.62, -14.85, 0.87, 77.95, -10.37],
@@ -339,7 +334,7 @@ if __name__ == '__main__':
 
     plist = get_port_list()
     print(plist)
-    mc = MyCobot(plist[0],115200) # 连接机械臂
+    mc = MechArm270(plist[0],115200) # 连接机械臂
 
     mc.send_angles(angle_table["move_init"], 50)
 
@@ -350,7 +345,7 @@ if __name__ == '__main__':
 
     # while running_flag:
     #     break
-    
+
     # # #######################################################记录五个导航点的信息
     for text, box_goals_1, box_goals_2 in zip(recognized_ocr_texts, box_goals_1, box_goals_2):
         box_info = {
@@ -372,11 +367,6 @@ if __name__ == '__main__':
             flag_feed_goalReached = map_navigation.moveToGoal(x_goal, y_goal, orientation_z, orientation_w)
             if flag_feed_goalReached:
 
-                # y平移2秒
-                map_navigation.pub_vel(0,-0.1,0)
-                time.sleep(2.5)
-                map_navigation.pub_vel(0,0,0)
-
                 print("python agv_aruco")
                 os.system('python agv_aruco.py') 
 
@@ -385,35 +375,31 @@ if __name__ == '__main__':
 
                 # 根据循环次数抓取,固定相机拍照位和吸取高度
                 if i == 0:
-                    angle_pick = angle_table["pick_watch1"]
-                    box_height = 61
+                    angle_pick = angle_table["pick_watch"]
+                    box_height = 140
                 elif i == 1:
-                    angle_pick = angle_table["pick_watch2"]
-                    box_height = 101
+                    angle_pick = angle_table["pick_watch"]
+                    box_height = 90
                 elif i == 2:
-                    angle_pick = angle_table["pick_watch2"]
-                    box_height = 61
+                    angle_pick = angle_table["pick_watch"]
+                    box_height = 140
                 elif i == 3:
-                    angle_pick = angle_table["pick_watch3"]
-                    box_height = 101
+                    angle_pick = angle_table["pick_watch"]
+                    box_height = 90
                 elif i == 4:
-                    angle_pick = angle_table["pick_watch3"]
-                    box_height = 61
+                    angle_pick = angle_table["pick_watch"]
+                    box_height = 90
               
                 recognized_qr_texts.append(pick(angle_pick,box_height))  # 发送拍照相机关节角度和Z轴高度，抓取并返回识别文字
 
                 # x平移1秒
                 map_navigation.pub_vel(-0.1,0,0)
-                time.sleep(1)
-
-                # y平移2秒
-                map_navigation.pub_vel(0,0.1,0)
-                time.sleep(2.35)
+                time.sleep(2.5)
                 map_navigation.pub_vel(0,0,0)
 
                 # 旋转180°
                 map_navigation.pub_vel(0,0,-0.1)
-                time.sleep(8)
+                time.sleep(4)
                 map_navigation.pub_vel(0,0,0)
 
                 # x平移1秒
@@ -458,20 +444,30 @@ if __name__ == '__main__':
       
     # #######################################################
     # # 充电区离墙太近了，里程计误差，导航容易卡在该点位
-    x_goal, y_goal, orientation_z, orientation_w = charge_goal
+
+    x_goal, y_goal, orientation_z, orientation_w = goal_1 #先导航到该点，避免撞到快递放置盒
     flag_feed_goalReached = map_navigation.moveToGoal(x_goal, y_goal, orientation_z, orientation_w)
     if flag_feed_goalReached:
-        pass #回充套装
 
-        # y平移2秒
-        # map_navigation.pub_vel(0,-0.1,0)
-        # time.sleep(2)
-        # map_navigation.pub_vel(0,0,0)  
-        # x平移2秒
-        map_navigation.pub_vel(-0.1,0,0)
-        time.sleep(3.5)
+        # 旋转180°
+        map_navigation.pub_vel(0,0,-0.1)
+        time.sleep(8)
         map_navigation.pub_vel(0,0,0)
 
-    else:
-        print("failed")
+        x_goal, y_goal, orientation_z, orientation_w = charge_goal
+        flag_feed_goalReached = map_navigation.moveToGoal(x_goal, y_goal, orientation_z, orientation_w)
+        if flag_feed_goalReached:
+            pass #回充套装
+
+            # y平移2秒
+            # map_navigation.pub_vel(0,-0.1,0)
+            # time.sleep(2)
+            # map_navigation.pub_vel(0,0,0)  
+            # x平移2秒
+            map_navigation.pub_vel(-0.1,0,0)
+            time.sleep(3.5)
+            map_navigation.pub_vel(0,0,0)
+
+        else:
+            print("failed")
         

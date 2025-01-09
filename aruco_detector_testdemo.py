@@ -9,7 +9,7 @@ class CameraProcessor:
     def __init__(self, camera_matrix, dist_matrix, marker_length=0.04):
         self.frame_queue_capture = queue.Queue(maxsize=2)  # 用于捕获帧
         self.frame_queue_process = queue.Queue(maxsize=2)  # 用于处理帧
-        self.pose_data = [None, None, None, None, None, None, None]
+        self.pose_data = [None, None, None, None, None, None]
         self.pose_data_dict = {}
         
         self.camera_matrix = camera_matrix
@@ -101,18 +101,15 @@ class CameraProcessor:
                 R_ct = np.matrix(cv2.Rodrigues(rvec)[0])
                 R_tc = R_ct.T
                 roll_marker, pitch_marker, yaw_marker = self._rotation_matrix_to_euler_angles(self.R_flip * R_tc)
-                
-                yaw_deg = math.degrees(yaw_marker)
 
-                if abs(yaw_deg) % 90.0 < 30:
-                    self.pose_data[0] = tvec[0] * 100
-                    self.pose_data[1] = tvec[1] * 100
-                    self.pose_data[2] = tvec[2] * 100
-                    self.pose_data[3] = math.degrees(roll_marker)
-                    self.pose_data[4] = math.degrees(pitch_marker)
-                    self.pose_data[5] = math.degrees(yaw_marker)
-                    self.pose_data[6] = cornerMid
-                    self.pose_data_dict[ids] = self.pose_data
+                self.pose_data[0] = tvec[0] * 100
+                self.pose_data[1] = tvec[1] * 100
+                self.pose_data[2] = tvec[2] * 100
+                self.pose_data[3] = math.degrees(roll_marker)
+                self.pose_data[4] = math.degrees(pitch_marker)
+                self.pose_data[5] = math.degrees(yaw_marker)
+
+                self.pose_data_dict[ids] = self.pose_data
 
                 roll_deg = math.degrees(roll_marker)
                 pitch_deg = math.degrees(pitch_marker)
@@ -148,9 +145,20 @@ class CameraProcessor:
 
                 if ids is not None:
                     ids_len = len(ids)
+                    res = []
                     for i in range(ids_len):
-                        self._detect(corners[i:i + 1], ids[i][0], frame)
+                        aruco_res = self._detect(corners[i:i + 1], ids[i][0], frame)
+                        if aruco_res is not None:
+                            res.append(aruco_res)
 
+                    if res:
+                        _z = res[0][2]
+                        _ry = res[0][4]
+                        _perc = res[0][6][0] / 960.0  # 归一化[0,1]
+                        print("Z:", _z)
+                        print("ry", _ry)
+                        print("perc", _perc)
+                        
                 # 将处理后的图像放入处理队列
                 if not self.frame_queue_process.full():
                     self.frame_queue_process.put(frame)
@@ -191,3 +199,12 @@ class CameraProcessor:
             video_capture.release()
         else:
             print("Error: Unable to open camera")
+
+# if __name__ == "__main__":
+#     camera_matrix = np.array([[785.855437, 0.000000, 451.670922], 
+#                               [0.000000, 584.820336, 259.056856],
+#                               [0.000000, 0.000000, 1.000000]], dtype=np.float32)
+#     dist_matrix = np.array([0.095135, -0.109279, -0.002513, -0.002433, 0.000000], dtype=np.float32)
+
+#     camera_processor = CameraProcessor(camera_matrix, dist_matrix)
+#     camera_processor.show_camera()
