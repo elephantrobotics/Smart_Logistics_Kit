@@ -350,36 +350,7 @@ if __name__ == '__main__':
 
     # while running_flag:
     #     break
-    ###########################################debug
-        # 获取列表中的最后一个城市
-        last_city = ['']
-        region = city_to_region_mapping.get(last_city, "未知区域") # 上海市：华东区，返回华东区
-        if region != "未知区域":
-            # 查找与该区域对应的目标位置
-            for box in boxes_with_text:
-                if box["text"] == region:
-
-                    # 获取该区域的两个个目标点
-                    box_goals_1 = box["box_goals_1"]
-                    box_goals_2 = box["box_goals_2"]
-
-                    # 遍历目标点和方向信息，依次导航到每个目标
-                    for target_num, goal in enumerate([box_goals_1, box_goals_2], 1):
-                        # 目标坐标
-                        x_goal, y_goal, orientation_z, orientation_w = goal
-
-                        print(f"导航到{region}的目标{target_num}: x={x_goal}, y={y_goal}, 方向z={orientation_z}, 方向w={orientation_w}")
-                        flag_feed_goalReached = map_navigation.moveToGoal(x_goal, y_goal, orientation_z, orientation_w)
-
-                    print("python agv_aruco")
-                    os.system('python agv_aruco.py')    # 导航目标点
-                    
-                    load()  #导航完所有点进行放盒子
-                    map_navigation.pub_vel(-0.1,0,0)
-                    time.sleep(5.7)
-                    map_navigation.pub_vel(0,0,0)   
-    ###########################################
-    sys.exit()
+    
     # # #######################################################记录五个导航点的信息
     for text, box_goals_1, box_goals_2 in zip(recognized_ocr_texts, box_goals_1, box_goals_2):
         box_info = {
