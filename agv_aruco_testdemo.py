@@ -1,7 +1,7 @@
 import threading
 import numpy as np
 import cv2
-from cuda_simple_camera import CameraProcessor  # 导入你的第一个文件中的类
+from cuda_simple_camera import CameraProcessor  
 
 class RealTimeData(threading.Thread):
     def __init__(self, processor):

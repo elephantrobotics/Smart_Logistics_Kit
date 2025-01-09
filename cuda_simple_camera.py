@@ -158,6 +158,7 @@ class CameraProcessor:
                         print("Z:", _z)
                         print("ry", _ry)
                         print("perc", _perc)
+                        
                 # 将处理后的图像放入处理队列
                 if not self.frame_queue_process.full():
                     self.frame_queue_process.put(frame)

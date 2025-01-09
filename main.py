@@ -237,7 +237,7 @@ def load():
         if coords_s is not None:
             break
 
-    coords_s[2]-=90
+    coords_s[2]-=70
     mc.send_coords(coords_s,40,mode=1) #z轴下降
     time.sleep(2)
     map_navigation.pump_on()
@@ -255,7 +255,7 @@ def load():
         if coords_s is not None:
             break
 
-    coords_s[2]+=90
+    coords_s[2]+=70
     mc.send_coords(coords_s,40,mode=1) #z轴抬高
     time.sleep(2)
 
@@ -308,13 +308,13 @@ if __name__ == '__main__':
     "zero_position":[0,0,0,0,0,0],
     "move_init":[90.06, -30.41, 22.14, -1.05, 87.45, 0.39],
     "pick_init":[5.44, 6.5, -13.09, -2.54, 81.82, -4.3],
-    "pick_watch1":[-38.05, 43.41, -34.54, 0.87, 71.71, -36.29],  #相机拍照位1,右侧的快递盒子
-    "pick_watch2":[1.05, 38.23, -39.99, -1.05, 86.48, -6.5],    #相机拍照位2,中心点快递盒子
-    "pick_watch3":[14.06, 46.23, -31.46, -3.25, 71.54, 13.27],   #相机拍照位3,左侧的快递盒子
+    "pick_watch1":[-38.14, 38.75, -33.39, 3.86, 74.79, -41.48],  #相机拍照位1,右侧的快递盒子
+    "pick_watch2":[-9.84, 25.83, -24.96, 4.3, 79.1, -9.84],    #相机拍照位2,中心点快递盒子
+    "pick_watch3":[29.0, 55.89, -60.29, -5.44, 86.48, 28.82],   #相机拍照位3,左侧的快递盒子
     "pick_point2":[-57.91, 0.61, -8.34, 6.32, 19.24, -2.19],    #抓取过渡点
-    "place_init":[-95.71, 22.41, -25.04, -3.07, 95.27, 1.4],
+    "place_init":[-93.6, 1.93, 6.24, -0.17, 68.81, -6.24],
     "place_point2":[-7.11, -5.62, -14.85, 0.87, 77.95, -10.37],
-    "place_point3":[84.99, 50.62, -45.17, -2.37, 79.54, 11.42],
+    "place_point3":[90.0, 22.5, -12.48, 2.54, 50.27, -0.35], #放盒子点位
     "place_point4":[-95.36, 7.03, -22.85, -3.07, 87.89, 1.46]
     }
 
@@ -323,6 +323,7 @@ if __name__ == '__main__':
         '上海市': '华东区',
         '南京市': '华东区',
         '东莞市': '华南区',
+        '广州市': '华南区',
         '武汉市': '华中区',
         '大连市': '东北区',
     }
@@ -349,7 +350,36 @@ if __name__ == '__main__':
 
     # while running_flag:
     #     break
+    ###########################################debug
+        # 获取列表中的最后一个城市
+        last_city = ['']
+        region = city_to_region_mapping.get(last_city, "未知区域") # 上海市：华东区，返回华东区
+        if region != "未知区域":
+            # 查找与该区域对应的目标位置
+            for box in boxes_with_text:
+                if box["text"] == region:
 
+                    # 获取该区域的两个个目标点
+                    box_goals_1 = box["box_goals_1"]
+                    box_goals_2 = box["box_goals_2"]
+
+                    # 遍历目标点和方向信息，依次导航到每个目标
+                    for target_num, goal in enumerate([box_goals_1, box_goals_2], 1):
+                        # 目标坐标
+                        x_goal, y_goal, orientation_z, orientation_w = goal
+
+                        print(f"导航到{region}的目标{target_num}: x={x_goal}, y={y_goal}, 方向z={orientation_z}, 方向w={orientation_w}")
+                        flag_feed_goalReached = map_navigation.moveToGoal(x_goal, y_goal, orientation_z, orientation_w)
+
+                    print("python agv_aruco")
+                    os.system('python agv_aruco.py')    # 导航目标点
+                    
+                    load()  #导航完所有点进行放盒子
+                    map_navigation.pub_vel(-0.1,0,0)
+                    time.sleep(5.7)
+                    map_navigation.pub_vel(0,0,0)   
+    ###########################################
+    sys.exit()
     # # #######################################################记录五个导航点的信息
     for text, box_goals_1, box_goals_2 in zip(recognized_ocr_texts, box_goals_1, box_goals_2):
         box_info = {
@@ -373,7 +403,7 @@ if __name__ == '__main__':
 
                 # y平移2秒
                 map_navigation.pub_vel(0,-0.1,0)
-                time.sleep(3)
+                time.sleep(2.5)
                 map_navigation.pub_vel(0,0,0)
 
                 print("python agv_aruco")
@@ -471,6 +501,6 @@ if __name__ == '__main__':
         time.sleep(3.5)
         map_navigation.pub_vel(0,0,0)
 
-    else:0184/
+    else:
         print("failed")
         
