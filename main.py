@@ -268,6 +268,31 @@ def load():
     mc.send_angles(angle_table["move_init"], 50)
     time.sleep(1)
 
+def ocr_recognized():
+        
+    # 目标点列表，按照你给定的顺序组织
+    goals_sequence = [
+        (box_goals_0[0], box_goals_2[0], box_goals_2[1]),  # box_goals_0 1号点 -> box_goals_2 1号、2号点
+        (box_goals_0[1], box_goals_2[2], box_goals_2[3]),  # box_goals_0 2号点 -> box_goals_2 3号、4号点
+        (box_goals_0[2], box_goals_2[4])                   # box_goals_0 3号点 -> box_goals_2 5号点
+    ]
+
+    # 遍历目标点顺序进行导航
+    for goal_set in goals_sequence:
+        for goal in goal_set:
+            # 目标坐标
+            x_goal, y_goal, orientation_z, orientation_w = goal
+            print(f"导航到目标点: x={x_goal}, y={y_goal}, 方向z={orientation_z}, 方向w={orientation_w}")
+            
+            # 执行导航
+            flag_feed_goalReached = map_navigation.moveToGoal(x_goal, y_goal, orientation_z, orientation_w)
+            
+            # 根据是否到达目标执行OCR识别
+            if flag_feed_goalReached:
+                recognized_ocr_texts.append(ocr_capture.start_capture())  # 识别文字，存储盒子的变量
+            else:
+                recognized_ocr_texts.append(None)  # 如果目标未到达，追加None
+
 def signal_handler(signal, frame):
     print("Ctrl+C pressed. Exiting...")
     # Close all connections
@@ -276,13 +301,19 @@ def signal_handler(signal, frame):
     sys.exit()
 
 if __name__ == '__main__':
-   
+
+    box_goals_0 = [
+        [-0.7349843764305115,0.24553439617156982,0.8816407909804326,0.471921090521919],#中间一号点,姿态朝前
+        [-1.1358978748321533,1.0654418468475342,0.8887916047179362,0.45831155711253446],#中间二号点,姿态朝前      
+        [-1.3920676708221436,1.4920663833618164,0.8958855713120555,0.4442848670784004] #中间三号点,姿态朝前
+    ]
+
     box_goals_1 = [
         [-0.7391788959503174,0.2486436188220978,-0.468811666883722,0.8832981495473123],#中间一号点,姿态朝后
         [-0.7391788959503174,0.2486436188220978,-0.468811666883722,0.8832981495473123],#中间一号点,姿态朝后
-        [-1.1358978748321533,1.0654418468475342,-0.49958137465689806,0.8662669623712566],#中间二号点
-        [-1.1358978748321533,1.0654418468475342,-0.49958137465689806,0.8662669623712566],#中间二号点
-        [-1.3920676708221436,1.4920663833618164,-0.4625007280446197,0.8866189015344736] #中间三号点
+        [-1.1358978748321533,1.0654418468475342,-0.49958137465689806,0.8662669623712566],#中间二号点,姿态朝后
+        [-1.1358978748321533,1.0654418468475342,-0.49958137465689806,0.8662669623712566],#中间二号点,姿态朝后
+        [-1.3920676708221436,1.4920663833618164,-0.4625007280446197,0.8866189015344736] #中间三号点,姿态朝后
     ]
 
     box_goals_2 = [
@@ -294,6 +325,7 @@ if __name__ == '__main__':
     ]
 
     goal_1 = [-0.7349843764305115,0.24553439617156982,0.8816407909804326,0.471921090521919]#中间一号点,姿态朝前
+    goal_1_back = [-0.7391788959503174,0.2486436188220978,-0.468811666883722,0.8832981495473123]#中间一号点,姿态朝后
     pack_goal = [-1.5727944374084473,1.5765453577041626,0.3845709618323087,0.9230954313154046]#快递分拣盒附近
     charge_goal =[-1.003286600112915,-0.6634970903396606,0.27711757476357934,0.9608360160595314]
 
@@ -303,13 +335,11 @@ if __name__ == '__main__':
     "zero_position":[0,0,0,0,0,0],
     "move_init":[90.06, -30.41, 22.14, -1.05, 87.45, 0.39],
     "pick_init":[5.44, 6.5, -13.09, -2.54, 81.82, -4.3],
-    # "pick_watch1":[-38.14, 38.75, -33.39, 3.86, 74.79, -41.48],  #相机拍照位1,右侧的快递盒子
     "pick_watch":[94.21, 11.6, -19.51, -0.26, 77.08, -0.26],    #相机拍照位2,中心点快递盒子
-    # "pick_watch3":[29.0, 55.89, -60.29, -5.44, 86.48, 28.82],   #相机拍照位3,左侧的快递盒子
     "pick_point2":[-57.91, 0.61, -8.34, 6.32, 19.24, -2.19],    #抓取过渡点
     "place_init":[-93.6, 1.93, 6.24, -0.17, 68.81, -6.24],
     "place_point2":[-7.11, -5.62, -14.85, 0.87, 77.95, -10.37],
-    "place_point3":[90.0, 22.5, -12.48, 2.54, 50.27, -0.35], #放盒子点位
+    "place_point3":[90.0, 22.5, -12.48, 2.54, 50.27, -0.35],    #放盒子点位
     "place_point4":[-95.36, 7.03, -22.85, -3.07, 87.89, 1.46]
     }
 
@@ -324,7 +354,8 @@ if __name__ == '__main__':
     }
 
     boxes_with_text = []
-    recognized_ocr_texts = ['华东区','华南区','华北区','华中区','东北区']
+    # recognized_ocr_texts = ['华东区','华南区','华北区','华中区','东北区'] #固定快递分拣点
+    recognized_ocr_texts = []
     recognized_qr_texts = []
 
     map_navigation = MapNavigation()
@@ -343,10 +374,9 @@ if __name__ == '__main__':
     running_flag = True
     signal.signal(signal.SIGINT, signal_handler)
 
-    # while running_flag:
-    #     break
+    # # ######################################################
+    ocr_recognized() #记录五个导航点的信息
 
-    # # #######################################################记录五个导航点的信息
     for text, box_goals_1, box_goals_2 in zip(recognized_ocr_texts, box_goals_1, box_goals_2):
         box_info = {
             "text": text,
@@ -360,54 +390,51 @@ if __name__ == '__main__':
         
     # ########################################################
     for i in range(5):##demo 循环5次,每次只抓一个盒子,然后对盒子进行分拣
-        x_goal, y_goal, orientation_z, orientation_w = goal_1 #先导航到该点，避免撞到快递放置盒
+        x_goal, y_goal, orientation_z, orientation_w = pack_goal
         flag_feed_goalReached = map_navigation.moveToGoal(x_goal, y_goal, orientation_z, orientation_w)
         if flag_feed_goalReached:
-            x_goal, y_goal, orientation_z, orientation_w = pack_goal
-            flag_feed_goalReached = map_navigation.moveToGoal(x_goal, y_goal, orientation_z, orientation_w)
-            if flag_feed_goalReached:
 
-                print("python agv_aruco")
-                os.system('python agv_aruco.py') 
+            print("python agv_aruco")
+            os.system('python agv_aruco.py') 
 
-                xGoal, yGoal, orientation_z, orientation_w,covariance = pack_pose
-                map_navigation.set_pose(xGoal, yGoal, orientation_z, orientation_w,covariance) #amcl重定位
+            xGoal, yGoal, orientation_z, orientation_w,covariance = pack_pose
+            map_navigation.set_pose(xGoal, yGoal, orientation_z, orientation_w,covariance) #amcl重定位
 
-                # 根据循环次数抓取,固定相机拍照位和吸取高度
-                if i == 0:
-                    angle_pick = angle_table["pick_watch"]
-                    box_height = 140
-                elif i == 1:
-                    angle_pick = angle_table["pick_watch"]
-                    box_height = 90
-                elif i == 2:
-                    angle_pick = angle_table["pick_watch"]
-                    box_height = 140
-                elif i == 3:
-                    angle_pick = angle_table["pick_watch"]
-                    box_height = 90
-                elif i == 4:
-                    angle_pick = angle_table["pick_watch"]
-                    box_height = 90
-              
-                recognized_qr_texts.append(pick(angle_pick,box_height))  # 发送拍照相机关节角度和Z轴高度，抓取并返回识别文字
+            # 根据循环次数抓取,固定相机拍照位和吸取高度
+            if i == 0:
+                angle_pick = angle_table["pick_watch"]
+                box_height = 140
+            elif i == 1:
+                angle_pick = angle_table["pick_watch"]
+                box_height = 90
+            elif i == 2:
+                angle_pick = angle_table["pick_watch"]
+                box_height = 140
+            elif i == 3:
+                angle_pick = angle_table["pick_watch"]
+                box_height = 90
+            elif i == 4:
+                angle_pick = angle_table["pick_watch"]
+                box_height = 90
+        
+            recognized_qr_texts.append(pick(angle_pick,box_height))  # 发送拍照相机关节角度和Z轴高度，抓取并返回识别文字
 
-                # x平移1秒
-                map_navigation.pub_vel(-0.1,0,0)
-                time.sleep(2.5)
-                map_navigation.pub_vel(0,0,0)
+            # x平移1秒
+            map_navigation.pub_vel(-0.1,0,0)
+            time.sleep(2.5)
+            map_navigation.pub_vel(0,0,0)
 
-                # 旋转180°
-                map_navigation.pub_vel(0,0,-0.1)
-                time.sleep(4)
-                map_navigation.pub_vel(0,0,0)
+            # 旋转180°
+            map_navigation.pub_vel(0,0,-0.1)
+            time.sleep(4)
+            map_navigation.pub_vel(0,0,0)
 
-                # x平移1秒
-                map_navigation.pub_vel(0.1,0,0)
-                time.sleep(2)
+            # x平移1秒
+            map_navigation.pub_vel(0.1,0,0)
+            time.sleep(2)
 
-            else:
-                print("failed")
+        else:
+            print("failed")
 
     # # #######################################################
     # 遍历识别到的所有市级名称，依次导航
@@ -432,7 +459,7 @@ if __name__ == '__main__':
                             x_goal, y_goal, orientation_z, orientation_w = goal
 
                             print(f"导航到{region}的目标{target_num}: x={x_goal}, y={y_goal}, 方向z={orientation_z}, 方向w={orientation_w}")
-                            flag_feed_goalReached = map_navigation.moveToGoal(x_goal, y_goal, orientation_z, orientation_w)
+                            map_navigation.moveToGoal(x_goal, y_goal, orientation_z, orientation_w)
 
                         print("python agv_aruco")
                         os.system('python agv_aruco.py')    # 导航目标点
@@ -445,14 +472,9 @@ if __name__ == '__main__':
     # #######################################################
     # # 充电区离墙太近了，里程计误差，导航容易卡在该点位
 
-    x_goal, y_goal, orientation_z, orientation_w = goal_1 #先导航到该点，避免撞到快递放置盒
+    x_goal, y_goal, orientation_z, orientation_w = goal_1_back #先导航到该点，避免撞到快递放置盒
     flag_feed_goalReached = map_navigation.moveToGoal(x_goal, y_goal, orientation_z, orientation_w)
     if flag_feed_goalReached:
-
-        # 旋转180°
-        map_navigation.pub_vel(0,0,-0.1)
-        time.sleep(8)
-        map_navigation.pub_vel(0,0,0)
 
         x_goal, y_goal, orientation_z, orientation_w = charge_goal
         flag_feed_goalReached = map_navigation.moveToGoal(x_goal, y_goal, orientation_z, orientation_w)
