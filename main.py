@@ -143,7 +143,7 @@ def pick(angle_watch,box_height,pick_times=1):
                 # X error compensation
                 p_base[0] +=0
                 # Y error compensation
-                p_base[1] +=10
+                p_base[1] +=20
                 # Z轴固定高度
                 p_base[2] = box_height
 
@@ -328,7 +328,7 @@ if __name__ == '__main__':
 
     goal_1 = [-0.7349843764305115,0.24553439617156982,0.8816407909804326,0.471921090521919]#中间一号点,姿态朝前
     goal_1_back = [-0.7391788959503174,0.2486436188220978,-0.468811666883722,0.8832981495473123]#中间一号点,姿态朝后
-    pack_goal = [-1.5727944374084473,1.5765453577041626,0.3845709618323087,0.9230954313154046]#快递分拣盒附近
+    pack_goal = [-1.7727944374084473,1.6765453577041626,0.3845709618323087,0.9230954313154046]#快递分拣盒附近
     charge_goal =[-1.003286600112915,-0.6634970903396606,0.27711757476357934,0.9608360160595314]
 
     pack_pose = [-1.5043163299560547,2.357182264328003,0.2875093576208822,0.9577778287684612,0.06853892326654787]
@@ -355,9 +355,13 @@ if __name__ == '__main__':
         '大连市': '东北区',
     }
 
+    initialized = True # 导航初始动作
+    box_2_height = 101  #快递盒子第二层Z轴高度101,demo2 140
+    box_1_height = 60   #快递盒子第一层Z轴高度60,demo2 90
+
     boxes_with_text = []
-    # recognized_ocr_texts = ['华东区','华南区','华北区','华中区','东北区'] #固定快递分拣点
-    recognized_ocr_texts = []
+    recognized_ocr_texts = ['华东区','华南区','华北区','华中区','东北区'] #固定快递分拣点
+    # recognized_ocr_texts = []
     recognized_qr_texts = []
 
     map_navigation = MapNavigation()
@@ -377,7 +381,9 @@ if __name__ == '__main__':
     signal.signal(signal.SIGINT, signal_handler)
 
     # # ######################################################
-    ocr_recognized() #记录五个导航点的信息
+    # # 记录五个导航点的信息
+    # # ######################################################
+    # ocr_recognized() 
 
     for text, box_goals_1, box_goals_2 in zip(recognized_ocr_texts, box_goals_1, box_goals_2):
         box_info = {
@@ -390,8 +396,15 @@ if __name__ == '__main__':
     for box in boxes_with_text:
         print(box)
         
-    # ########################################################
-    for i in range(5):##demo 循环5次,每次只抓一个盒子,然后对盒子进行分拣
+    # # ######################################################
+    # # 循环5次,每次只抓一个盒子,然后对盒子进行分拣
+    # # ######################################################
+    for i in range(5):
+        if (initialized):
+            initialized = False
+            x_goal, y_goal, orientation_z, orientation_w = goal_1
+            map_navigation.moveToGoal(x_goal, y_goal, orientation_z, orientation_w)
+            
         x_goal, y_goal, orientation_z, orientation_w = pack_goal
         flag_feed_goalReached = map_navigation.moveToGoal(x_goal, y_goal, orientation_z, orientation_w)
         if flag_feed_goalReached:
@@ -405,19 +418,19 @@ if __name__ == '__main__':
             # 根据循环次数抓取,固定相机拍照位和吸取高度
             if i == 0:
                 angle_pick = angle_table["pick_watch"]
-                box_height = 140
+                box_height = box_2_height
             elif i == 1:
                 angle_pick = angle_table["pick_watch"]
-                box_height = 90
+                box_height = box_1_height
             elif i == 2:
                 angle_pick = angle_table["pick_watch"]
-                box_height = 140
+                box_height = box_2_height
             elif i == 3:
                 angle_pick = angle_table["pick_watch"]
-                box_height = 90
+                box_height = box_1_height
             elif i == 4:
                 angle_pick = angle_table["pick_watch"]
-                box_height = 90
+                box_height = box_1_height
         
             recognized_qr_texts.append(pick(angle_pick,box_height))  # 发送拍照相机关节角度和Z轴高度，抓取并返回识别文字
 
@@ -438,8 +451,9 @@ if __name__ == '__main__':
         else:
             print("failed")
 
-    # # #######################################################
-    # 遍历识别到的所有市级名称，依次导航
+    # # ######################################################
+    # # 遍历识别到的所有市级名称，依次导航
+    # # ######################################################
         if recognized_qr_texts: #recognized_qr_texts = ['上海市', '南京市','武汉市','北京市','大连市']  # 通过 OCR 获取的市级列表
             print("recognized_ocr_texts:",recognized_ocr_texts) #debug
             print("recognized_qr_texts:",recognized_qr_texts)   #debug 
@@ -472,7 +486,8 @@ if __name__ == '__main__':
                         map_navigation.pub_vel(0,0,0)
       
     # #######################################################
-    # # 充电区离墙太近了，里程计误差，导航容易卡在该点位
+    # # 回充套装 充电区离墙太近了，里程计误差，导航容易卡在该点位
+    # # ######################################################
 
     x_goal, y_goal, orientation_z, orientation_w = goal_1_back #先导航到该点，避免撞到快递放置盒
     flag_feed_goalReached = map_navigation.moveToGoal(x_goal, y_goal, orientation_z, orientation_w)
@@ -489,7 +504,7 @@ if __name__ == '__main__':
             # map_navigation.pub_vel(0,0,0)  
             # x平移2秒
             map_navigation.pub_vel(-0.1,0,0)
-            time.sleep(3.5)
+            time.sleep(2)
             map_navigation.pub_vel(0,0,0)
 
         else:

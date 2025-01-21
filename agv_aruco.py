@@ -148,7 +148,7 @@ def stages_rot(_dir = 1, _first_dir_times = 3, _second_dir_times = 6):
     return 0
 
 def Horizontal_movement(times = 6):
-    sp = 0.5
+    sp = 0.2
     time_gap = 0.50 #平移的时间
 
     for i in range(times):
