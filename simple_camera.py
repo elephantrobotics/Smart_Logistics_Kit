@@ -46,8 +46,8 @@ def show_camera():
     window_title = "CSI Camera"
 
     # To flip the image, modify the flip_method parameter (0 and 2 are the most common)
-    print(gstreamer_pipeline(flip_method=0))
-    video_capture = cv2.VideoCapture(gstreamer_pipeline(flip_method=0), cv2.CAP_GSTREAMER)
+    # print(gstreamer_pipeline(flip_method=1))
+    video_capture = cv2.VideoCapture(gstreamer_pipeline(flip_method=2), cv2.CAP_GSTREAMER)
     if video_capture.isOpened():
         try:
             window_handle = cv2.namedWindow(window_title, cv2.WINDOW_AUTOSIZE)
@@ -55,12 +55,12 @@ def show_camera():
                 ret_val, frame = video_capture.read()
                 if not ret_val:
                     break
-                flipped_frame = cv2.flip(frame,-1)                    
+                # flipped_frame = cv2.flip(frame,-1)                    
                 # Check to see if the user closed the window
                 # Under GTK+ (Jetson Default), WND_PROP_VISIBLE does not work correctly. Under Qt it does
                 # GTK - Substitute WND_PROP_AUTOSIZE to detect if window has been closed by user
                 if cv2.getWindowProperty(window_title, cv2.WND_PROP_AUTOSIZE) >= 0:
-                    cv2.imshow(window_title, flipped_frame)
+                    cv2.imshow(window_title, frame)
                 else:
                     break 
                 keyCode = cv2.waitKey(10) & 0xFF

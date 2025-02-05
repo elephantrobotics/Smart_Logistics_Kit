@@ -4,12 +4,13 @@ import threading
 import queue
 import numpy as np
 import math
+import time
 
 class CameraProcessor:
     def __init__(self, camera_matrix, dist_matrix, marker_length=0.04):
         self.frame_queue_capture = queue.Queue(maxsize=2)  # 用于捕获帧
         self.frame_queue_process = queue.Queue(maxsize=2)  # 用于处理帧
-        self.pose_data = [None, None, None, None, None, None, None]
+        self.pose_data = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, (0.0, 0.0)]
         self.pose_data_dict = {}
         
         self.camera_matrix = camera_matrix
@@ -120,7 +121,7 @@ class CameraProcessor:
 
 
     def capture_frames(self, cap):
-        while True:
+        while self.running:
             ret_val, frame = cap.read()
             if ret_val:
                 if self.frame_queue_capture.full():
@@ -128,7 +129,7 @@ class CameraProcessor:
                 self.frame_queue_capture.put(frame)
 
     def process_frames(self):
-        while True:
+        while self.running:
             if not self.frame_queue_capture.empty():
                 frame = self.frame_queue_capture.get()
 
@@ -166,7 +167,7 @@ class CameraProcessor:
 
     def display_processed_frames(self, frame_queue_process):
         window_title = "CSI Camera (Processed)"
-        while True:
+        while self.running:
             if not frame_queue_process.empty():
                 frame = frame_queue_process.get()
                 cv2.imshow(window_title, frame)
@@ -179,26 +180,35 @@ class CameraProcessor:
         video_capture = cv2.VideoCapture(self.gstreamer_pipeline(flip_method=0), cv2.CAP_GSTREAMER)
         
         if video_capture.isOpened():
-            capture_thread = threading.Thread(target=self.capture_frames, args=(video_capture,))
-            process_thread = threading.Thread(target=self.process_frames)
-            display_thread = threading.Thread(target=self.display_processed_frames, args=(self.frame_queue_process,))
-            
-            capture_thread.start()
-            process_thread.start()
-            display_thread.start()
+            self.running = True  # 确保程序运行
+            capture_thread = threading.Thread(target=self.capture_frames, args=(video_capture,)) #线程一：获取最新的数据帧，丢弃队列中最旧的帧
+            process_thread = threading.Thread(target=self.process_frames) #线程二：根据最新的数据帧，处理Aruco码，获得姿态和中心点像素坐标数据
+            display_thread = threading.Thread(target=self.display_processed_frames, args=(self.frame_queue_process,)) # 线程三：显示处理后的数据帧(opencv可视化处理)
+            try:
+                capture_thread.start()
+                process_thread.start()
+                display_thread.start()
 
-            capture_thread.join()
-            process_thread.join()
-            display_thread.join()
-            video_capture.release()
+                # 用循环检测 Ctrl+C，而不是 join() 阻塞
+                while self.running:
+                    time.sleep(0.1)  # 避免 CPU 过载
+
+            except KeyboardInterrupt:
+                print("\nKeyboardInterrupt detected. Stopping threads...")
+
+            finally:
+                self.running = False  # 确保所有线程退出
+                video_capture.release()
+                cv2.destroyAllWindows()
+                print("Camera released and program exited.")
         else:
             print("Error: Unable to open camera")
 
-# if __name__ == "__main__":
-#     camera_matrix = np.array([[785.855437, 0.000000, 451.670922], 
-#                               [0.000000, 584.820336, 259.056856],
-#                               [0.000000, 0.000000, 1.000000]], dtype=np.float32)
-#     dist_matrix = np.array([0.095135, -0.109279, -0.002513, -0.002433, 0.000000], dtype=np.float32)
+if __name__ == "__main__":
+    camera_matrix = np.array([[785.855437, 0.000000, 451.670922], 
+                              [0.000000, 584.820336, 259.056856],
+                              [0.000000, 0.000000, 1.000000]], dtype=np.float32)
+    dist_matrix = np.array([0.095135, -0.109279, -0.002513, -0.002433, 0.000000], dtype=np.float32)
 
-#     camera_processor = CameraProcessor(camera_matrix, dist_matrix)
-#     camera_processor.show_camera()
+    camera_processor = CameraProcessor(camera_matrix, dist_matrix)
+    camera_processor.show_camera()

@@ -36,7 +36,6 @@ def gstreamer_pipeline(
 
 class OCRVideoCapture:
     def __init__(self, font_path="./SIMFANG.TTF", font_size=40):
-        pass
         logging.basicConfig(level=logging.ERROR)
         self.ocr = PaddleOCR(use_angle_cls=True, lang='ch')
         self.font = ImageFont.truetype(font_path, font_size)

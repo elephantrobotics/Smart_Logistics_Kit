@@ -8,6 +8,7 @@ import aruco_detector
 from pickle import TRUE
 from std_msgs.msg import Int8
 from geometry_msgs.msg import Twist
+from OCRVideoCapture import OCRVideoCapture
 
 DETECT = False
 
@@ -223,7 +224,9 @@ def main_process(first_dir = 1):
         print ("initial found failed")        
         return 0
 
-    # print ("Step 3")
+    print ("Step 3")
+    recognized_ocr_texts.append(ocr_capture.start_capture()) # ocr识别
+    print(f"识别到{recognized_ocr_texts[-1]},快递即将搬运至{recognized_ocr_texts[-1]}")
     # step 3: move to center
     # if move_to_center() == 0:  #让小车odom跟ArUco码对齐同一直线，目前效果不好
     #    print ("Target not found") 
@@ -274,6 +277,8 @@ def main_process(first_dir = 1):
     rot_once(1,1,0,0) #停止运动
 
 if __name__=='__main__':
+    recognized_ocr_texts = []
+    ocr_capture = OCRVideoCapture()
     try:
         print ("The main process would be " + str(main_process(first_dir = -1)) )
     except rospy.exceptions.ROSException as e:
