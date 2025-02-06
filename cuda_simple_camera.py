@@ -177,11 +177,11 @@ class CameraProcessor:
                 break
 
     def show_camera(self):
-        video_capture = cv2.VideoCapture(self.gstreamer_pipeline(flip_method=0), cv2.CAP_GSTREAMER)
+        self.video_capture = cv2.VideoCapture(self.gstreamer_pipeline(flip_method=0), cv2.CAP_GSTREAMER)
         
-        if video_capture.isOpened():
+        if self.video_capture.isOpened():
             self.running = True  # 确保程序运行
-            capture_thread = threading.Thread(target=self.capture_frames, args=(video_capture,)) #线程一：获取最新的数据帧，丢弃队列中最旧的帧
+            capture_thread = threading.Thread(target=self.capture_frames, args=(self.video_capture,)) #线程一：获取最新的数据帧，丢弃队列中最旧的帧
             process_thread = threading.Thread(target=self.process_frames) #线程二：根据最新的数据帧，处理Aruco码，获得姿态和中心点像素坐标数据
             display_thread = threading.Thread(target=self.display_processed_frames, args=(self.frame_queue_process,)) # 线程三：显示处理后的数据帧(opencv可视化处理)
             try:
@@ -198,11 +198,17 @@ class CameraProcessor:
 
             finally:
                 self.running = False  # 确保所有线程退出
-                video_capture.release()
+                self.video_capture.release()
                 cv2.destroyAllWindows()
                 print("Camera released and program exited.")
         else:
             print("Error: Unable to open camera")
+
+    def stop_camera(self):
+        self.running = False  # 确保所有线程退出
+        self.video_capture.release()
+        cv2.destroyAllWindows()
+        print("Camera released and program exited.")
 
 if __name__ == "__main__":
     camera_matrix = np.array([[785.855437, 0.000000, 451.670922], 
