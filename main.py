@@ -380,10 +380,10 @@ if __name__ == '__main__':
     running_flag = True
     signal.signal(signal.SIGINT, signal_handler)
 
-    # # ######################################################
+    ##########################################################
     # # 功能一：记录五个导航点的信息
-    # # ######################################################
-    # ocr_recognized() 
+    ##########################################################
+    # ocr_recognized() # 视觉识别误差较大,该功能暂不使用
 
     for text, box_goals_1, box_goals_2 in zip(recognized_ocr_texts, box_goals_1, box_goals_2):
         box_info = {
@@ -396,9 +396,9 @@ if __name__ == '__main__':
     for box in boxes_with_text:
         print(box)
         
-    # # ######################################################
+    ##########################################################
     # # 功能二：循环5次,每次只抓一个盒子,然后对盒子进行分拣
-    # # ######################################################
+    ##########################################################
     for i in range(5):
         if (initialized):
             initialized = False
@@ -451,9 +451,9 @@ if __name__ == '__main__':
         else:
             print("failed")
 
-    # # ######################################################
+    ##########################################################
     # # 功能三：遍历识别到的所有市级名称，依次导航
-    # # ######################################################
+    ##########################################################
         if recognized_qr_texts: #recognized_qr_texts = ['上海市', '南京市','武汉市','北京市','大连市']  # 通过 OCR 获取的市级列表
             print("recognized_ocr_texts:",recognized_ocr_texts) #debug
             print("recognized_qr_texts:",recognized_qr_texts)   #debug 
@@ -477,6 +477,10 @@ if __name__ == '__main__':
                             print(f"导航到{region}的目标{target_num}: x={x_goal}, y={y_goal}, 方向z={orientation_z}, 方向w={orientation_w}")
                             map_navigation.moveToGoal(x_goal, y_goal, orientation_z, orientation_w)
 
+                        recognized_ocr_texts.append(ocr_capture.start_capture())
+
+                        print(f"识别到{recognized_ocr_texts[-1]},{region}快递即将搬运至{recognized_ocr_texts[-1]}")
+
                         print("python agv_aruco")
                         os.system('python agv_aruco.py')    # 导航目标点
                         
@@ -485,9 +489,9 @@ if __name__ == '__main__':
                         time.sleep(5.7)
                         map_navigation.pub_vel(0,0,0)
       
-    # #######################################################
+    ##########################################################
     # # 功能四：回充套装 充电区离墙太近了，里程计误差，导航容易卡在该点位
-    # # ######################################################
+    ##########################################################
 
     x_goal, y_goal, orientation_z, orientation_w = goal_1_back #先导航到该点，避免撞到快递放置盒
     flag_feed_goalReached = map_navigation.moveToGoal(x_goal, y_goal, orientation_z, orientation_w)
