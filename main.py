@@ -361,7 +361,7 @@ if __name__ == '__main__':
 
     boxes_with_text = []
     recognized_ocr_texts = ['华东区','华南区','华北区','华中区','东北区'] #固定快递分拣点
-    # recognized_ocr_texts = [] # ocr识别添加快递分拣点
+    recognized_ocr = [] # ocr识别添加快递分拣点
     recognized_qr_texts = []
 
     map_navigation = MapNavigation()
@@ -477,9 +477,9 @@ if __name__ == '__main__':
                             print(f"导航到{region}的目标{target_num}: x={x_goal}, y={y_goal}, 方向z={orientation_z}, 方向w={orientation_w}")
                             map_navigation.moveToGoal(x_goal, y_goal, orientation_z, orientation_w)
 
-                        recognized_ocr_texts.append(ocr_capture.start_capture())
+                        recognized_ocr.append(ocr_capture.start_capture())
 
-                        print(f"识别到{recognized_ocr_texts[-1]},{region}快递即将搬运至{recognized_ocr_texts[-1]}")
+                        print(f"识别到{recognized_ocr[-1]},{region}快递即将搬运至{recognized_ocr[-1]}")
 
                         print("python agv_aruco")
                         os.system('python agv_aruco.py')    # 导航目标点

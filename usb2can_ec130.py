@@ -85,12 +85,11 @@ Ctrl+C/c:关闭自动回充功能并退出.    Ctrl+C/c:Quit the program.
                 if len(self.buffer) < 2:
                     self.buffer.extend(byte)  
                     if len(self.buffer) == 2:
-                        if len(self.buffer) == 2:
-                            # 如果帧头为 0xFE 0xFE，则开始接收数据
-                            if self.buffer[0] != 0xFE or self.buffer[1] != 0xFE:
-                                # 如果不是有效的帧头，则清空缓冲区并跳到下次循环
-                                self.buffer.clear()
-                                continue  # 继续等待下一个字节                   
+                        # 如果帧头为 0xFE 0xFE，则开始接收数据
+                        if self.buffer[0] != 0xFE or self.buffer[1] != 0xFE:
+                            # 如果不是有效的帧头，则清空缓冲区并跳到下次循环
+                            self.buffer.clear()
+                            continue  # 继续等待下一个字节                   
                 else:
                     self.buffer.extend(byte)
 
@@ -135,16 +134,15 @@ Ctrl+C/c:关闭自动回充功能并退出.    Ctrl+C/c:Quit the program.
                                 # 正数直接转换
                                 actual_current = raw_current / 30.0
 
-                            # 处理红外数据，提取第七位和第八位
-                            infrared_seventh_bit = (infrared >> 6) & 0x01  # 提取第七位
-                            infrared_eighth_bit = (infrared >> 7) & 0x01   # 提取第八位
+                            # 处理红外数据
+                            infrared_bits = [(infrared >> (7 - i)) & 0x01 for i in range(8)]
 
                             # 打印或处理数据
                             print(f"X Speed: {x_speed:.3f}, Y Speed: {y_speed}, Z Speed: {z_speed:.3f}, "
                                 f"Actual Current: {actual_current:.3f} A, Infrared: {infrared}")
                             
                             # 打印或处理红外位信息
-                            print(f"Seventh Bit: {infrared_seventh_bit}, Eighth Bit: {infrared_eighth_bit}")
+                            print(f"L_A: {infrared_bits[2]}, L_B: {infrared_bits[3]}, R_B: {infrared_bits[4]}, R_A: {infrared_bits[5]}, infrared_flag : {infrared_bits[6]}, Charging flag: {infrared_bits[7]}")
 
                             # 清空缓冲区，准备下一帧数据
                             self.buffer.clear()
