@@ -1,3 +1,6 @@
+#!/usr/bin/env python                                                                                                                      
+#coding=UTF-8
+import rospy
 import serial
 import time
 
@@ -8,7 +11,12 @@ class SerialCANParser:
         self.timeout = timeout  # 超时设置
         self.ser = None  # 串口对象
         self.buffer = bytearray()  # 存储当前读取的字节
+        self.max_retries = 3  # 最大重试次数
 
+        # 存储实时数据
+        self.x_speed = 0.0
+        self.z_speed = 0.0
+        self.infrared_bits = []
 
     def open_serial(self):
         """打开串口"""
@@ -53,34 +61,34 @@ class SerialCANParser:
             z_speed_raw = -((65536 - z_speed_raw) & 0xFFFF)  # 补码转换为负数
 
         # 转换单位为 m/s 和 rad/s
-        x_speed = x_speed_raw / 1000.0  # X速度单位为 m/s
-        y_speed = 0  # Y速度为0
-        z_speed = z_speed_raw / 1000.0  # Z速度单位为 rad/s
+        self.x_speed = x_speed_raw / 1000.0  # X速度单位为 m/s
+        self.y_speed = 0  # Y速度为0
+        self.z_speed = z_speed_raw / 1000.0  # Z速度单位为 rad/s
 
-        infrared = data[6]  # 红外数据
-        raw_current = data[7]  # 电流数据
+        self.infrared = data[6]  # 红外数据
+        self.raw_current = data[7]  # 电流数据
 
-        if raw_current > 32767:  # 无符号数大于 32767 表示负值（因为最大值是 65535）
+        if self.raw_current > 32767:  # 无符号数大于 32767 表示负值（因为最大值是 65535）
             # 转换为负数
-            actual_current = -(65536 - raw_current) * 30.0
+            self.actual_current = -(65536 - self.raw_current) * 30.0
         else:
             # 正数直接转换
-            actual_current = raw_current * 30.0
+            self.actual_current = self.raw_current * 30.0
 
         # 处理红外数据
-        infrared_bits = [(infrared >> (7 - i)) & 0x01 for i in range(8)]
+        self.infrared_bits = [(self.infrared >> (7 - i)) & 0x01 for i in range(8)]
 
         # 打印或处理数据
-        print(f"X Speed: {x_speed:.3f}, Y Speed: {y_speed}, Z Speed: {z_speed:.3f}, "
-              f"Actual Current: {actual_current:.3f} mA, Infrared: {infrared}")
+        print(f"X Speed: {self.x_speed:.3f}, Y Speed: {self.y_speed}, Z Speed: {self.z_speed:.3f}, "
+              f"Actual Current: {self.actual_current:.3f} mA, Infrared: {self.infrared}")
 
         # 打印或处理红外位信息
-        print(f"L_A: {infrared_bits[2]}, L_B: {infrared_bits[3]}, R_B: {infrared_bits[4]}, "
-              f"R_A: {infrared_bits[5]}, infrared_flag : {infrared_bits[6]}, Charging flag: {infrared_bits[7]}")
+        print(f"L_A: {self.infrared_bits[2]}, L_B: {self.infrared_bits[3]}, R_B: {self.infrared_bits[4]}, "
+              f"R_A: {self.infrared_bits[5]}, infrared_flag : {self.infrared_bits[6]}, Charging flag: {self.infrared_bits[7]}")
 
     def read_serial_data(self):
         """读取串口数据并解析"""
-        while True:
+        while not rospy.is_shutdown():
             if self.ser.in_waiting > 0:
                 byte = self.ser.read(1)   # 读取一个字节
 
@@ -116,17 +124,54 @@ class SerialCANParser:
                         if can_frame_id == 0x182 and data_length == 0x08: # 根据can帧id进行判断
                             # 如果帧ID为0x182,校验通过,进行数据赋值
                             self.parse_can_data(data)
+
                             # 清空缓冲区，准备下一帧数据
                             self.buffer.clear()
+                            return self.x_speed, self.z_speed, self.infrared_bits   # 返回解析后的数据
                         else:
                             # 清空缓冲区，准备下一帧数据
                             self.buffer.clear()
 
+    def read_serial_response(self):
+        """读取串口响应数据，直到接收到 '\r\n' 或超时"""
+        response = bytearray()  # 使用 bytearray 来存储原始字节流
+        while True:
+            if self.ser.in_waiting > 0:
+                byte = self.ser.read(1)
+                response += byte
+
+            # 检查是否已接收到完整响应
+            if b'\r\n' in response:
+                break
+
+            # 超时机制，防止死循环
+            if len(response) > 100:
+                break
+
+        return bytes(response)  # 返回原始字节流（bytes）
+
     def send_at_commands(self, commands):
         """发送 AT 命令并等待响应"""
         for command in commands:
-            self.ser.write(command.encode() + b'\r\n')
-            print(f"发送命令: {command}")
+            retries = 0
+            while retries < self.max_retries:
+                self.ser.write(command.encode() + b'\r\n')
+                print(f"发送命令: {command}")
+
+                # 等待响应并读取数据
+                response = self.read_serial_response()
+
+                # 检查响应是否包含 "OK"
+                if b"OK" in response:
+                    print(f"收到响应: {response}")
+                    break  # 如果收到 OK，退出重试循环
+                else:
+                    retries += 1
+                    print(f"未收到预期的响应，收到: {response}")
+
+            if retries == self.max_retries:
+                print(f"重试 {self.max_retries} 次后仍未收到有效响应，请检查设备。")
+                break
 
     def start(self):
         """开始读取和处理数据"""

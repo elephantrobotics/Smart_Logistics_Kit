@@ -15,6 +15,7 @@ from pymycobot.utils import get_port_list
 from OCRVideoCapture import OCRVideoCapture
 from QRCodeScanner import QRCodeScanner
 from Transformation import homo_transform_matrix
+from wit_usb2can import SerialCANParser
 
 from actionlib_msgs.msg import *
 from actionlib_msgs.msg import GoalID
@@ -115,8 +116,8 @@ class MapNavigation:
 def pick(angle_watch,box_height,pick_times=1):
     global scanner 
     for i in range(pick_times): #i=1,快递盒子一次只吸取一个，先识别一层
-        mc.send_angles(angle_watch, 50) # 相机拍照位 
-        time.sleep(1)
+        mc.send_angles(angle_watch, 80) # 相机拍照位
+        wait()
 
         while True :
             qr_texts,tvecs =scanner.start_capture() # 获取QR码城市信息和tvec位移矩阵
@@ -150,7 +151,7 @@ def pick(angle_watch,box_height,pick_times=1):
                 new_coords = np.concatenate([p_base, curr_coords[3:]]) # 将x,y,z和当前姿态进行连接成一个新数组
                 print("move_coords",list(new_coords))
                 mc.send_coords(list(new_coords),20,1)
-                time.sleep(2)
+                time.sleep(3)
 
                 map_navigation.pump_on()
                 time.sleep(2)
@@ -174,8 +175,8 @@ def pick(angle_watch,box_height,pick_times=1):
                 mc.send_angles(angle_table["pick_point2"], 50)
                 time.sleep(1)
 
-                mc.send_angles(angle_table["place_init"], 50)
-                time.sleep(2)
+                mc.send_angles(angle_table["place_init"], 80)
+                wait()
 
                 coords_s = mc.get_coords() #获取当前位姿
                 print(coords_s)
@@ -302,6 +303,13 @@ def signal_handler(signal, frame):
     print("Connections closed.")
     sys.exit()
 
+def wait():
+    time.sleep(0.3)
+    state = mc.is_moving()
+    while(state != 0):
+        state = mc.is_moving()
+        time.sleep(0.1)
+
 if __name__ == '__main__':
 
     box_goals_0 = [
@@ -366,12 +374,14 @@ if __name__ == '__main__':
 
     map_navigation = MapNavigation()
     ocr_capture = OCRVideoCapture()
-    # global scanner
     scanner = QRCodeScanner()
+    parser = SerialCANParser('/dev/ttyUSB0', 9600, 1)
 
     plist = get_port_list()
     print(plist)
-    mc = MechArm270(plist[0],115200) # 连接机械臂
+    mc = MechArm270('/dev/ttyACM0',115200) # 连接机械臂
+    # mc = MechArm270('/dev/ttyACM0',115200,debug=1) # 连接机械臂并打开debug模式
+    mc.set_fresh_mode(0)
 
     mc.send_angles(angle_table["move_init"], 50)
 
@@ -500,16 +510,26 @@ if __name__ == '__main__':
         x_goal, y_goal, orientation_z, orientation_w = charge_goal
         flag_feed_goalReached = map_navigation.moveToGoal(x_goal, y_goal, orientation_z, orientation_w)
         if flag_feed_goalReached:
-            pass #回充套装
 
-            # y平移2秒
-            # map_navigation.pub_vel(0,-0.1,0)
-            # time.sleep(2)
-            # map_navigation.pub_vel(0,0,0)  
-            # x平移2秒
-            map_navigation.pub_vel(-0.1,0,0)
-            time.sleep(2)
-            map_navigation.pub_vel(0,0,0)
+            parser.open_serial() # 打开usb串口
+            try:
+                # 发送AT 命令从透传模式进入AT指令模式
+                parser.send_at_commands(["AT+CG", "AT+AT"])
+                
+                while not rospy.is_shutdown():
+                    # 开始读取数据
+                    x_speed,z_speed,infrared_bits = parser.read_serial_data()
+
+                    if infrared_bits[7] == 0 :
+                        map_navigation.pub_vel(x_speed,0,z_speed)
+                    else:
+                        print("回充导航完成")
+                        map_navigation.pub_vel(0,0,0)
+                        parser.close_serial()
+                        exit()  #结束程序
+            except KeyboardInterrupt:
+                print("手动中止程序。")
+            sys.exit()  #结束程序 
 
         else:
             print("failed")
