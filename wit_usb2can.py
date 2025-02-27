@@ -65,6 +65,8 @@ class SerialCANParser:
         self.y_speed = 0  # Y速度为0
         self.z_speed = z_speed_raw / 1000.0  # Z速度单位为 rad/s
 
+        self.which_mode = data[2]
+
         self.infrared = data[6]  # 红外数据
         self.raw_current = data[7]  # 电流数据
 
@@ -127,7 +129,7 @@ class SerialCANParser:
 
                             # 清空缓冲区，准备下一帧数据
                             self.buffer.clear()
-                            return self.x_speed, self.z_speed, self.infrared_bits   # 返回解析后的数据
+                            return self.x_speed, self.z_speed, self.which_mode, self.infrared_bits   # 返回解析后的数据
                         else:
                             # 清空缓冲区，准备下一帧数据
                             self.buffer.clear()

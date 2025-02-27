@@ -513,7 +513,7 @@ if __name__ == '__main__':
 
         # x平移1秒
         map_navigation.pub_vel(0.1,0,0)
-        time.sleep(6)
+        time.sleep(5.5)
         map_navigation.pub_vel(0,0,0)
 
         # 旋转
@@ -526,17 +526,39 @@ if __name__ == '__main__':
             # 发送AT 命令从透传模式进入AT指令模式
             parser.send_at_commands(["AT+CG", "AT+AT"])
             
-            while not rospy.is_shutdown():
+            while True:
                 # 开始读取数据
-                x_speed,z_speed,infrared_bits = parser.read_serial_data()
-
+                x_speed,z_speed,which_mode,infrared_bits = parser.read_serial_data()
                 if infrared_bits[7] == 0 :
-                    map_navigation.pub_vel(x_speed,0,z_speed)
+                    if(which_mode) == 0x01:
+                        map_navigation.pub_vel(x_speed,0,z_speed)
+                    elif (which_mode) == 0xBB: # 测压区
+                        map_navigation.pub_vel(0,0,0)
+                        time.sleep(1)
+                        map_navigation.pub_vel(0,0,0.5)
+                        time.sleep(1.15)
+                        map_navigation.pub_vel(0,0,0)
+                        time.sleep(0.5)
+                        map_navigation.pub_vel(-0.1,0,0)
+                        time.sleep(1)
+                        map_navigation.pub_vel(0,0,0)
+                    elif (which_mode) == 0xAA: # 充电区
+                        map_navigation.pub_vel(0,0,0)
+                        time.sleep(1)
+                        map_navigation.pub_vel(0,0,-0.5)
+                        time.sleep(1.15)
+                        map_navigation.pub_vel(0,0,0)
+                        time.sleep(0.5)
+                        map_navigation.pub_vel(-0.1,0,0)
+                        time.sleep(1)
+                        map_navigation.pub_vel(0,0,0)
+                        break
+                    elif (which_mode) == 0xCF:
+                        map_navigation.pub_vel(0,0,0)
+                        break
                 else:
-                    print("回充导航完成")
                     map_navigation.pub_vel(0,0,0)
-                    parser.close_serial()
-                    exit()  #结束程序
+                    break 
         except KeyboardInterrupt:
             print("手动中止程序。")
         sys.exit()  #结束程序 
