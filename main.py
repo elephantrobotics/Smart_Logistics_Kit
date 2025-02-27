@@ -142,16 +142,16 @@ def pick(angle_watch,box_height,pick_times=1):
                 p_base = np.squeeze((mat @ p_end)[:-1]).astype(int) #将转换矩阵与齐次坐标形式的二维码位移向量相乘，得到[x,y,z,1]并去除最后一个元素(齐次坐标)，最后转为整数类型。
 
                 # X error compensation
-                p_base[0] +=0
+                p_base[0] -=10
                 # Y error compensation
-                p_base[1] +=20
+                p_base[1] +=40
                 # Z轴固定高度
                 p_base[2] = box_height
 
                 new_coords = np.concatenate([p_base, curr_coords[3:]]) # 将x,y,z和当前姿态进行连接成一个新数组
                 print("move_coords",list(new_coords))
                 mc.send_coords(list(new_coords),20,1)
-                time.sleep(3)
+                wait()
 
                 map_navigation.pump_on()
                 time.sleep(2)
@@ -170,10 +170,10 @@ def pick(angle_watch,box_height,pick_times=1):
                 
                 curr_coords[2]+=40  # z轴抬高
                 mc.send_coords(curr_coords,40,mode=1) #z轴抬高
-                time.sleep(2)
+                wait()
 
                 mc.send_angles(angle_table["pick_point2"], 50)
-                time.sleep(1)
+                wait()
 
                 mc.send_angles(angle_table["place_init"], 80)
                 wait()
@@ -192,16 +192,17 @@ def pick(angle_watch,box_height,pick_times=1):
                 hight= 45
                 coords_s[2]-=hight
                 mc.send_coords(coords_s,40,mode=1) #z轴下降
-                time.sleep(2)
+                wait()
                 map_navigation.pump_off()
+                time.sleep(2)
                 print("pump_off")
 
                 coords_s[2]+=hight        
                 mc.send_coords(coords_s,40,mode=1) #z轴抬高
-                time.sleep(2)
+                wait()
 
                 mc.send_angles(angle_table["place_point4"], 50) # 过渡点，防止撞掉盒子
-                time.sleep(2)
+                wait()
 
                 scanner = None
                 scanner = QRCodeScanner()
@@ -217,14 +218,14 @@ def pick(angle_watch,box_height,pick_times=1):
 
 def load():
     mc.send_angles([0,0,0,0,0,0], 60)
-    time.sleep(2)
+    wait()
 
     mc.send_angles(angle_table["place_init"], 50)
-    time.sleep(2)
+    wait()
 
     coords_s = mc.get_coords() #获取当前位姿
     print(coords_s)
-    time.sleep(2)
+    wait()
     
     while coords_s is None:
         time.sleep(0.5)
@@ -235,14 +236,14 @@ def load():
 
     coords_s[2]-=70
     mc.send_coords(coords_s,40,mode=1) #z轴下降
-    time.sleep(2)
+    wait()
     map_navigation.pump_on()
-    time.sleep(2)
+    wait()
     print("pump_off")
 
     coords_s = mc.get_coords()
     print(coords_s)
-    time.sleep(2)
+    wait()
     
     while coords_s is None:
         time.sleep(0.5)
@@ -253,21 +254,23 @@ def load():
 
     coords_s[2]+=70
     mc.send_coords(coords_s,40,mode=1) #z轴抬高
-    time.sleep(2)
+    wait()
 
     mc.send_angles(angle_table["place_point4"], 50)
-    time.sleep(1)
+    wait()
 
     mc.send_angles(angle_table["place_point2"], 50)
-    time.sleep(2)
+    wait()
 
     mc.send_angles(angle_table["place_point3"], 50)
-    time.sleep(2)
+    wait()
+    
     map_navigation.pump_off()
+    time.sleep(2)
 
     # 结束后复位
     mc.send_angles(angle_table["move_init"], 50)
-    time.sleep(1)
+    wait()
 
 def ocr_recognized():
         
@@ -336,8 +339,8 @@ if __name__ == '__main__':
 
     goal_1 = [-0.7349843764305115,0.24553439617156982,0.8816407909804326,0.471921090521919]#中间一号点,姿态朝前
     goal_1_back = [-0.7391788959503174,0.2486436188220978,-0.468811666883722,0.8832981495473123]#中间一号点,姿态朝后
-    pack_goal = [-1.7727944374084473,1.6765453577041626,0.3845709618323087,0.9230954313154046]#快递分拣盒附近
-    charge_goal =[-1.003286600112915,-0.6634970903396606,0.27711757476357934,0.9608360160595314]
+    pack_goal = [-1.6927944374084473,1.6765453577041626,0.29911497291546424,0.9542170785401931]#快递分拣盒附近
+    charge_goal =[-0.5688837170600891,-0.31650811433792114,0.4588518939959322,0.8885127682686084]
 
     pack_pose = [-1.5043163299560547,2.357182264328003,0.2875093576208822,0.9577778287684612,0.06853892326654787]
 
@@ -384,6 +387,7 @@ if __name__ == '__main__':
     mc.set_fresh_mode(0)
 
     mc.send_angles(angle_table["move_init"], 50)
+    wait()
 
     # Register the Ctrl+C signal handler
     global running_flag 
@@ -500,37 +504,41 @@ if __name__ == '__main__':
                         map_navigation.pub_vel(0,0,0)
       
     ##########################################################
-    # # 功能四：回充套装 充电区离墙太近了，里程计误差，导航容易卡在该点位
+    # # 功能四：回充套装
     ##########################################################
 
     x_goal, y_goal, orientation_z, orientation_w = goal_1_back #先导航到该点，避免撞到快递放置盒
     flag_feed_goalReached = map_navigation.moveToGoal(x_goal, y_goal, orientation_z, orientation_w)
     if flag_feed_goalReached:
 
-        x_goal, y_goal, orientation_z, orientation_w = charge_goal
-        flag_feed_goalReached = map_navigation.moveToGoal(x_goal, y_goal, orientation_z, orientation_w)
-        if flag_feed_goalReached:
+        # x平移1秒
+        map_navigation.pub_vel(0.1,0,0)
+        time.sleep(6)
+        map_navigation.pub_vel(0,0,0)
 
-            parser.open_serial() # 打开usb串口
-            try:
-                # 发送AT 命令从透传模式进入AT指令模式
-                parser.send_at_commands(["AT+CG", "AT+AT"])
-                
-                while not rospy.is_shutdown():
-                    # 开始读取数据
-                    x_speed,z_speed,infrared_bits = parser.read_serial_data()
+        # 旋转
+        map_navigation.pub_vel(0,0,0.1)
+        time.sleep(4.8)
+        map_navigation.pub_vel(0,0,0)
 
-                    if infrared_bits[7] == 0 :
-                        map_navigation.pub_vel(x_speed,0,z_speed)
-                    else:
-                        print("回充导航完成")
-                        map_navigation.pub_vel(0,0,0)
-                        parser.close_serial()
-                        exit()  #结束程序
-            except KeyboardInterrupt:
-                print("手动中止程序。")
-            sys.exit()  #结束程序 
+        parser.open_serial() # 打开usb串口
+        try:
+            # 发送AT 命令从透传模式进入AT指令模式
+            parser.send_at_commands(["AT+CG", "AT+AT"])
+            
+            while not rospy.is_shutdown():
+                # 开始读取数据
+                x_speed,z_speed,infrared_bits = parser.read_serial_data()
 
-        else:
-            print("failed")
+                if infrared_bits[7] == 0 :
+                    map_navigation.pub_vel(x_speed,0,z_speed)
+                else:
+                    print("回充导航完成")
+                    map_navigation.pub_vel(0,0,0)
+                    parser.close_serial()
+                    exit()  #结束程序
+        except KeyboardInterrupt:
+            print("手动中止程序。")
+        sys.exit()  #结束程序 
+
         

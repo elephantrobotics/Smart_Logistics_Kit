@@ -247,7 +247,7 @@ def main_process(first_dir = 1):
                 else:
                     stages_rot(1,2,4)   #没对齐二维码旋转对齐   
 
-            elif 10 < l < 30 :      
+            elif 5 < l < 30 :      
                 if stage_slow_rot(6):   #如果对齐二维码
                     res = aruco_detector.process_qr_data() #获取aruco二维码信息
                     if res != -1:
@@ -256,11 +256,11 @@ def main_process(first_dir = 1):
                 else:
                     stages_rot(1,2,4)   #没对齐二维码旋转对齐
 
-            elif 5 < l < 10:
-                #one time up
-                front_once(0.21, sp=0.01)#前进0.21秒
-                print ("Finsih doing") 
-                continue
+            # elif 5 < l < 10:
+            #     #one time up
+            #     front_once(0.21, sp=0.01)#前进0.21秒
+            #     print ("Finsih doing") 
+            #     continue
 
             elif l < 5:
                 # rot_once(1,1,0,0)
