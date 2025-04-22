@@ -54,8 +54,7 @@ def show_camera():
             while True:
                 ret_val, frame = video_capture.read()
                 if not ret_val:
-                    break
-                # flipped_frame = cv2.flip(frame,-1)                    
+                    break                  
                 # Check to see if the user closed the window
                 # Under GTK+ (Jetson Default), WND_PROP_VISIBLE does not work correctly. Under Qt it does
                 # GTK - Substitute WND_PROP_AUTOSIZE to detect if window has been closed by user

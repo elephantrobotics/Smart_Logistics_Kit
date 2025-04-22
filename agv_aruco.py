@@ -97,7 +97,7 @@ def stage_quick_rot(fir_dir = 1, first_rot_times = 3, second_rot_times = 6):
 def stage_slow_rot(slow_rot_times = 6):
     _dir = 1
     sp = 0.5
-    time_gap = 0.50 #旋转的时间
+    time_gap = 0.64 #旋转的时间
 
     #pre read some data 
     rot_once(1,1,0)
@@ -267,9 +267,15 @@ def main_process(first_dir = 1):
                 break
                 
         else:#获取不到aruco二维码信息就退出循环
-            print("Can't detect aruco.")
-            pub_vel(0,0,0)
-            break
+            time.sleep(1)
+            res = aruco_detector.process_qr_data() #等1秒后再次获取aruco二维码信息
+            if res == -1:
+                front_once(1,0.01)
+                print("Can't detect aruco.")
+                pub_vel(0,0,0)
+                break
+            else:
+                continue
     
     rot_once(1,1,0,0) #停止运动
 

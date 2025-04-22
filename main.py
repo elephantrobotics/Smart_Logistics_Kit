@@ -1,4 +1,4 @@
-#!/usr/bin/env python                                                                                                                      
+#!/usr/bin/env python
 #coding=UTF-8
 import rospy
 import time
@@ -367,6 +367,7 @@ if __name__ == '__main__':
     }
 
     initialized = True # 导航初始动作
+    USB_CAN_Enable = True # 是否开启充电装置通信
     box_2_height = 101  #快递盒子第二层Z轴高度101,demo2 140
     box_1_height = 60   #快递盒子第一层Z轴高度60,demo2 90
 
@@ -420,50 +421,52 @@ if __name__ == '__main__':
             map_navigation.moveToGoal(x_goal, y_goal, orientation_z, orientation_w)
             
         x_goal, y_goal, orientation_z, orientation_w = pack_goal
-        flag_feed_goalReached = map_navigation.moveToGoal(x_goal, y_goal, orientation_z, orientation_w)
-        if flag_feed_goalReached:
+        flag_feed_goalReached = False
+        while not flag_feed_goalReached:
+            print("Trying to reach pack_goal...")
+            flag_feed_goalReached = map_navigation.moveToGoal(x_goal, y_goal, orientation_z, orientation_w)
+            if not flag_feed_goalReached:
+                print("Navigation failed, retrying...")
+                time.sleep(2)  # 加一个小延时防止频繁调用
 
-            print("python agv_aruco")
-            os.system('python agv_aruco.py') 
+        print("python agv_aruco")
+        os.system('python agv_aruco.py') 
 
-            xGoal, yGoal, orientation_z, orientation_w,covariance = pack_pose
-            map_navigation.set_pose(xGoal, yGoal, orientation_z, orientation_w,covariance) #amcl重定位
+        xGoal, yGoal, orientation_z, orientation_w,covariance = pack_pose
+        map_navigation.set_pose(xGoal, yGoal, orientation_z, orientation_w,covariance) #amcl重定位
 
-            # 根据循环次数抓取,固定相机拍照位和吸取高度
-            if i == 0:
-                angle_pick = angle_table["pick_watch"]
-                box_height = box_2_height
-            elif i == 1:
-                angle_pick = angle_table["pick_watch"]
-                box_height = box_1_height
-            elif i == 2:
-                angle_pick = angle_table["pick_watch"]
-                box_height = box_2_height
-            elif i == 3:
-                angle_pick = angle_table["pick_watch"]
-                box_height = box_1_height
-            elif i == 4:
-                angle_pick = angle_table["pick_watch"]
-                box_height = box_1_height
-        
-            recognized_qr_texts.append(pick(angle_pick,box_height))  # 发送拍照相机关节角度和Z轴高度，抓取并返回识别文字
+        # 根据循环次数抓取,固定相机拍照位和吸取高度
+        if i == 0:
+            angle_pick = angle_table["pick_watch"]
+            box_height = box_2_height
+        elif i == 1:
+            angle_pick = angle_table["pick_watch"]
+            box_height = box_1_height
+        elif i == 2:
+            angle_pick = angle_table["pick_watch"]
+            box_height = box_2_height
+        elif i == 3:
+            angle_pick = angle_table["pick_watch"]
+            box_height = box_1_height
+        elif i == 4:
+            angle_pick = angle_table["pick_watch"]
+            box_height = box_1_height
+    
+        recognized_qr_texts.append(pick(angle_pick,box_height))  # 发送拍照相机关节角度和Z轴高度，抓取并返回识别文字
 
-            # x平移1秒
-            map_navigation.pub_vel(-0.1,0,0)
-            time.sleep(2.5)
-            map_navigation.pub_vel(0,0,0)
+        # x平移1秒
+        map_navigation.pub_vel(-0.1,0,0)
+        time.sleep(2.5)
+        map_navigation.pub_vel(0,0,0)
 
-            # 旋转180°
-            map_navigation.pub_vel(0,0,-0.1)
-            time.sleep(4)
-            map_navigation.pub_vel(0,0,0)
+        # 旋转180°
+        map_navigation.pub_vel(0,0,-0.1)
+        time.sleep(4)
+        map_navigation.pub_vel(0,0,0)
 
-            # x平移1秒
-            map_navigation.pub_vel(0.1,0,0)
-            time.sleep(2)
-
-        else:
-            print("failed")
+        # x平移1秒
+        map_navigation.pub_vel(0.1,0,0)
+        time.sleep(2)
 
     ##########################################################
     # # 功能三：遍历识别到的所有市级名称，依次导航
@@ -518,49 +521,48 @@ if __name__ == '__main__':
 
         # 旋转
         map_navigation.pub_vel(0,0,0.1)
-        time.sleep(4.8)
+        time.sleep(4.2)
         map_navigation.pub_vel(0,0,0)
 
-        parser.open_serial() # 打开usb串口
-        try:
-            # 发送AT 命令从透传模式进入AT指令模式
-            parser.send_at_commands(["AT+CG", "AT+AT"])
-            
-            while True:
-                # 开始读取数据
-                x_speed,z_speed,which_mode,infrared_bits = parser.read_serial_data()
-                if infrared_bits[7] == 0 :
-                    if(which_mode) == 0x01:
-                        map_navigation.pub_vel(x_speed,0,z_speed)
-                    elif (which_mode) == 0xBB: # 测压区
+        if USB_CAN_Enable:
+            parser.open_serial() # 打开usb串口
+            try:
+                # 发送AT 命令从透传模式进入AT指令模式
+                parser.send_at_commands(["AT+CG", "AT+AT"])
+                
+                while True:
+                    # 开始读取数据
+                    x_speed,z_speed,which_mode,infrared_bits = parser.read_serial_data()
+                    if infrared_bits[7] == 0 :
+                        if(which_mode) == 0x01:
+                            map_navigation.pub_vel(x_speed,0,z_speed)
+                        # elif (which_mode) == 0xBB: # 测压区
+                        #     map_navigation.pub_vel(0,0,0)
+                        #     time.sleep(1)
+                        #     map_navigation.pub_vel(0,0,0.5)
+                        #     time.sleep(1.15)
+                        #     map_navigation.pub_vel(0,0,0)
+                        #     time.sleep(0.5)
+                        #     map_navigation.pub_vel(-0.1,0,0)
+                        #     time.sleep(1)
+                        #     map_navigation.pub_vel(0,0,0)
+                        elif (which_mode) == 0xAA: # 充电区
+                            map_navigation.pub_vel(0,0,0)
+                            break
+                        elif (which_mode) == 0xCF:
+                            map_navigation.pub_vel(0,0,0)
+                            break
+                    else:
                         map_navigation.pub_vel(0,0,0)
-                        time.sleep(1)
-                        map_navigation.pub_vel(0,0,0.5)
-                        time.sleep(1.15)
-                        map_navigation.pub_vel(0,0,0)
-                        time.sleep(0.5)
-                        map_navigation.pub_vel(-0.1,0,0)
-                        time.sleep(1)
-                        map_navigation.pub_vel(0,0,0)
-                    elif (which_mode) == 0xAA: # 充电区
-                        map_navigation.pub_vel(0,0,0)
-                        time.sleep(1)
-                        map_navigation.pub_vel(0,0,-0.5)
-                        time.sleep(1.15)
-                        map_navigation.pub_vel(0,0,0)
-                        time.sleep(0.5)
-                        map_navigation.pub_vel(-0.1,0,0)
-                        time.sleep(1)
-                        map_navigation.pub_vel(0,0,0)
-                        break
-                    elif (which_mode) == 0xCF:
-                        map_navigation.pub_vel(0,0,0)
-                        break
-                else:
-                    map_navigation.pub_vel(0,0,0)
-                    break 
-        except KeyboardInterrupt:
-            print("手动中止程序。")
+                        break 
+            except KeyboardInterrupt:
+                print("手动中止程序。")
+        else:
+            # x平移1秒
+            map_navigation.pub_vel(-0.1,0,0)
+            time.sleep(7.5)
+            map_navigation.pub_vel(0,0,0)
+
         sys.exit()  #结束程序 
 
         
