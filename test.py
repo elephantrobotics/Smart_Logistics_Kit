@@ -395,6 +395,30 @@ if __name__ == '__main__':
     running_flag = True
     signal.signal(signal.SIGINT, signal_handler)
 
+    for i in range(5):
+        # 根据循环次数抓取,固定相机拍照位和吸取高度
+        if i == 0:
+            angle_pick = angle_table["pick_watch"]
+            box_height = box_2_height
+        elif i == 1:
+            angle_pick = angle_table["pick_watch"]
+            box_height = box_1_height
+        elif i == 2:
+            angle_pick = angle_table["pick_watch"]
+            box_height = box_2_height
+        elif i == 3:
+            angle_pick = angle_table["pick_watch"]
+            box_height = box_1_height
+        elif i == 4:
+            angle_pick = angle_table["pick_watch"]
+            box_height = box_1_height
+
+        recognized_qr_texts.append(pick(angle_pick,box_height))  # 发送拍照相机关节角度和Z轴高度，抓取并返回识别文字
+
+        load()  #导航完所有点进行放盒子
+
+    exit()
+
     ##########################################################
     # # 功能一：记录五个导航点的信息
     ##########################################################
