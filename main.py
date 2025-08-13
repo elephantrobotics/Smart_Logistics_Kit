@@ -322,27 +322,17 @@ if __name__ == '__main__':
     ]
 
     box_goals_1 = [
-        [-0.7391788959503174,0.2486436188220978,-0.468811666883722,0.8832981495473123],#中间一号点,姿态朝后
-        [-0.7391788959503174,0.2486436188220978,-0.468811666883722,0.8832981495473123],#中间一号点,姿态朝后
-        [-1.1358978748321533,1.0654418468475342,-0.49958137465689806,0.8662669623712566],#中间二号点,姿态朝后
-        [-1.1358978748321533,1.0654418468475342,-0.49958137465689806,0.8662669623712566],#中间二号点,姿态朝后
-        [-1.7721543312072754,1.5437819957733154,-0.4625007280446197,0.8866189015344736] #中间三号点,姿态朝后
-    ]
-
-    box_goals_2 = [
-        [-0.7391788959503174,0.2486436188220978,0.2948542038624959,0.9555422536259784],#1号盒子姿态
-        [-0.7391788959503174,0.2486436188220978,-0.953971689949811,0.29989667349655913],#2号盒子姿态
-        [-1.1358978748321533,1.0654418468475342,0.29911497291546424,0.9542170785401931],#3号盒子姿态
-        [-1.1358978748321533,1.0654418468475342,-0.952682813485717,0.30396621011049635],#4号盒子姿态
-        [-1.7721543312072754,1.5437819957733154,-0.9580734245756398,0.28652279686249366]#5号盒子姿态
+        [0.5966848731040955,-0.3366346061229706,-0.6758443687669797,0.7370443604057783],#1号盒子姿态
+        [0.01773279905319214,-0.3184984624385834,-0.6625018822643105,0.7490602485756707]#2号盒子姿态
     ]
 
     goal_1 = [-0.7349843764305115,0.24553439617156982,0.8816407909804326,0.471921090521919]#中间一号点,姿态朝前
     goal_1_back = [-0.7391788959503174,0.2486436188220978,-0.468811666883722,0.8832981495473123]#中间一号点,姿态朝后
-    pack_goal = [-1.6927944374084473,1.6765453577041626,0.29911497291546424,0.9542170785401931]#快递分拣盒附近
+    
+    pack_goal = [0.6559188365936279,0.064272940158844,0.006805813950087559,0.9999768401800497]#快递分拣盒附近
     charge_goal =[-0.5688837170600891,-0.31650811433792114,0.4588518939959322,0.8885127682686084]
 
-    pack_pose = [-1.5043163299560547,2.357182264328003,0.2875093576208822,0.9577778287684612,0.06853892326654787]
+    pack_pose = [1.0198508501052856,0.24185414612293243,0.06337628811906951,0.9979897024039119,0.06853892326654787]
 
     angle_table = {
     "zero_position":[0,0,0,0,0,0],
@@ -366,15 +356,16 @@ if __name__ == '__main__':
         '大连市': '东北区',
     }
 
-    initialized = True # 导航初始动作
+    # initialized = True # 导航初始动作
     USB_CAN_Enable = False # 是否开启充电装置通信
     box_2_height = 101  #快递盒子第二层Z轴高度101,demo2 140
     box_1_height = 60   #快递盒子第一层Z轴高度60,demo2 90
 
     boxes_with_text = []
-    recognized_ocr_texts = ['华东区','华南区','华北区','华中区','东北区'] #固定快递分拣点
+    recognized_ocr_texts = ['华中区','华南区'] #固定快递分拣点
     recognized_ocr = [] # ocr识别添加快递分拣点
     recognized_qr_texts = []
+    PICK_TIMES = 2  # 循环抓取次数
 
     map_navigation = MapNavigation()
     ocr_capture = OCRVideoCapture()
@@ -391,43 +382,42 @@ if __name__ == '__main__':
     wait()
 
     # Register the Ctrl+C signal handler
-    global running_flag 
+    global running_flag
     running_flag = True
     signal.signal(signal.SIGINT, signal_handler)
 
     ##########################################################
-    # # 功能一：记录五个导航点的信息
+    # # 功能一：记录三个导航点的信息
     ##########################################################
     # ocr_recognized() # 视觉识别误差较大,该功能暂不使用
 
-    for text, box_goals_1, box_goals_2 in zip(recognized_ocr_texts, box_goals_1, box_goals_2):
+    for text, box_goals_1 in zip(recognized_ocr_texts, box_goals_1):
         box_info = {
             "text": text,
-            "box_goals_1": box_goals_1,
-            "box_goals_2": box_goals_2,
+            "box_goals_1": box_goals_1
         }
         boxes_with_text.append(box_info)
     
     for box in boxes_with_text:
         print(box)
-        
+
     ##########################################################
-    # # 功能二：循环5次,每次只抓一个盒子,然后对盒子进行分拣
+    # # 功能二：循环PICK_TIMES次,每次只抓一个盒子,然后对盒子进行分拣
     ##########################################################
-    for i in range(5):
-        if (initialized):
-            initialized = False
-            x_goal, y_goal, orientation_z, orientation_w = goal_1
-            map_navigation.moveToGoal(x_goal, y_goal, orientation_z, orientation_w)
+    for i in range(PICK_TIMES):
+        # if (initialized):
+        #     initialized = False
+        #     x_goal, y_goal, orientation_z, orientation_w = goal_1
+        #     map_navigation.moveToGoal(x_goal, y_goal, orientation_z, orientation_w)
             
-        x_goal, y_goal, orientation_z, orientation_w = pack_goal
+        x_goal, y_goal, orientation_z, orientation_w = pack_goal #导航到快递分拣货架
         flag_feed_goalReached = False
         while not flag_feed_goalReached:
             print("Trying to reach pack_goal...")
             flag_feed_goalReached = map_navigation.moveToGoal(x_goal, y_goal, orientation_z, orientation_w)
             if not flag_feed_goalReached:
                 print("Navigation failed, retrying...")
-                time.sleep(2)  # 加一个小延时防止频繁调用
+                time.sleep(2)  # 加一个延时防止频繁调用
 
         print("python agv_aruco")
         os.system('python agv_aruco.py') 
@@ -436,22 +426,14 @@ if __name__ == '__main__':
         map_navigation.set_pose(xGoal, yGoal, orientation_z, orientation_w,covariance) #amcl重定位
 
         # 根据循环次数抓取,固定相机拍照位和吸取高度
+        angle_pick = angle_table["pick_watch"]
         if i == 0:
-            angle_pick = angle_table["pick_watch"]
             box_height = box_2_height
         elif i == 1:
-            angle_pick = angle_table["pick_watch"]
             box_height = box_1_height
         elif i == 2:
-            angle_pick = angle_table["pick_watch"]
-            box_height = box_2_height
-        elif i == 3:
-            angle_pick = angle_table["pick_watch"]
             box_height = box_1_height
-        elif i == 4:
-            angle_pick = angle_table["pick_watch"]
-            box_height = box_1_height
-    
+
         recognized_qr_texts.append(pick(angle_pick,box_height))  # 发送拍照相机关节角度和Z轴高度，抓取并返回识别文字
 
         # x平移1秒
@@ -482,12 +464,11 @@ if __name__ == '__main__':
                 for box in boxes_with_text:
                     if box["text"] == region:
 
-                        # 获取该区域的两个个目标点
+                        # 获取该区域的目标点
                         box_goals_1 = box["box_goals_1"]
-                        box_goals_2 = box["box_goals_2"]
 
                         # 遍历目标点和方向信息，依次导航到每个目标
-                        for target_num, goal in enumerate([box_goals_1, box_goals_2], 1):
+                        for target_num, goal in enumerate([box_goals_1], 1):
                             # 目标坐标
                             x_goal, y_goal, orientation_z, orientation_w = goal
 
@@ -503,66 +484,9 @@ if __name__ == '__main__':
                         
                         load()  #导航完所有点进行放盒子
                         map_navigation.pub_vel(-0.1,0,0)
-                        time.sleep(5.7)
+                        time.sleep(3.7)
                         map_navigation.pub_vel(0,0,0)
-      
-    ##########################################################
-    # # 功能四：回充套装
-    ##########################################################
 
-    x_goal, y_goal, orientation_z, orientation_w = goal_1_back #先导航到该点，避免撞到快递放置盒
-    flag_feed_goalReached = map_navigation.moveToGoal(x_goal, y_goal, orientation_z, orientation_w)
-    if flag_feed_goalReached:
-
-        # x平移1秒
-        map_navigation.pub_vel(0.1,0,0)
-        time.sleep(5.5)
-        map_navigation.pub_vel(0,0,0)
-
-        # 旋转
-        map_navigation.pub_vel(0,0,0.1)
-        time.sleep(4.2)
-        map_navigation.pub_vel(0,0,0)
-
-        if USB_CAN_Enable:
-            parser.open_serial() # 打开usb串口
-            try:
-                # 发送AT 命令从透传模式进入AT指令模式
-                parser.send_at_commands(["AT+CG", "AT+AT"])
-                
-                while True:
-                    # 开始读取数据
-                    x_speed,z_speed,which_mode,infrared_bits = parser.read_serial_data()
-                    if infrared_bits[7] == 0 :
-                        if(which_mode) == 0x01:
-                            map_navigation.pub_vel(x_speed,0,z_speed)
-                        # elif (which_mode) == 0xBB: # 测压区
-                        #     map_navigation.pub_vel(0,0,0)
-                        #     time.sleep(1)
-                        #     map_navigation.pub_vel(0,0,0.5)
-                        #     time.sleep(1.15)
-                        #     map_navigation.pub_vel(0,0,0)
-                        #     time.sleep(0.5)
-                        #     map_navigation.pub_vel(-0.1,0,0)
-                        #     time.sleep(1)
-                        #     map_navigation.pub_vel(0,0,0)
-                        elif (which_mode) == 0xAA: # 充电区
-                            map_navigation.pub_vel(0,0,0)
-                            break
-                        elif (which_mode) == 0xCF:
-                            map_navigation.pub_vel(0,0,0)
-                            break
-                    else:
-                        map_navigation.pub_vel(0,0,0)
-                        break 
-            except KeyboardInterrupt:
-                print("手动中止程序。")
-        else:
-            # x平移1秒
-            map_navigation.pub_vel(-0.1,0,0)
-            time.sleep(7.5)
-            map_navigation.pub_vel(0,0,0)
-
-        sys.exit()  #结束程序 
+    sys.exit()  #结束程序 
 
         
