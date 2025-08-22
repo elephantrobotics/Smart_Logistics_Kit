@@ -536,16 +536,6 @@ if __name__ == '__main__':
                     if infrared_bits[7] == 0 :
                         if(which_mode) == 0x01:
                             map_navigation.pub_vel(x_speed,0,z_speed)
-                        # elif (which_mode) == 0xBB: # 测压区
-                        #     map_navigation.pub_vel(0,0,0)
-                        #     time.sleep(1)
-                        #     map_navigation.pub_vel(0,0,0.5)
-                        #     time.sleep(1.15)
-                        #     map_navigation.pub_vel(0,0,0)
-                        #     time.sleep(0.5)
-                        #     map_navigation.pub_vel(-0.1,0,0)
-                        #     time.sleep(1)
-                        #     map_navigation.pub_vel(0,0,0)
                         elif (which_mode) == 0xAA: # 充电区
                             map_navigation.pub_vel(0,0,0)
                             break
