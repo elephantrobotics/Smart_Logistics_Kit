@@ -1,22 +1,48 @@
 #!/usr/bin/env python                                                                                                                      
 #coding=UTF-8
-import rospy
+import signal
 import serial
+import sys
 import time
 
 class SerialCANParser:
-    def __init__(self, serial_port='/dev/ttyUSB0', baudrate=9600, timeout=1):
+    """
+    SerialCANParser 类
+    -----------------
+    用于通过串口解析 CAN 总线数据，负责串口初始化、数据读取与缓冲区管理，
+    并提供实时的速度和传感器信息接口。
+    """
+    def __init__(self, serial_port='/dev/ttyUSB0', baudrate=9600, timeout=1, debug = True):
+        """
+        参数:
+            serial_port (str): 串口设备路径，默认 '/dev/ttyUSB0'
+            baudrate (int): 串口波特率，默认 9600
+            timeout (float): 串口读写超时时间，默认 1 秒
+            debug (bool): 是否启用调试模式，输出更多日志
+        """
         self.serial_port = serial_port  # 串口名称
         self.baudrate = baudrate  # 波特率
         self.timeout = timeout  # 超时设置
         self.ser = None  # 串口对象
         self.buffer = bytearray()  # 存储当前读取的字节
         self.max_retries = 3  # 最大重试次数
+        self.debug = debug
 
         # 存储实时数据
         self.x_speed = 0.0
         self.z_speed = 0.0
         self.infrared_bits = []
+
+        self.shutdown = False
+        signal.signal(signal.SIGINT, self._handle_exit)
+        signal.signal(signal.SIGTERM, self._handle_exit)
+
+    def _handle_exit(self, sig, frame):
+        """信号处理函数"""
+        print("Ctrl+C pressed. Exiting...")
+        self.shutdown = True
+        print("Connections closed.")
+        sys.exit()
 
     def open_serial(self):
         """打开串口"""
@@ -79,18 +105,19 @@ class SerialCANParser:
 
         # 处理红外数据
         self.infrared_bits = [(self.infrared >> (7 - i)) & 0x01 for i in range(8)]
+        
+        if self.debug:
+            # 打印或处理数据
+            print(f"X Speed: {self.x_speed:.3f}, Y Speed: {self.y_speed}, Z Speed: {self.z_speed:.3f}, "
+                f"Actual Current: {self.actual_current:.3f} mA, Infrared: {self.infrared}")
 
-        # 打印或处理数据
-        print(f"X Speed: {self.x_speed:.3f}, Y Speed: {self.y_speed}, Z Speed: {self.z_speed:.3f}, "
-              f"Actual Current: {self.actual_current:.3f} mA, Infrared: {self.infrared}")
-
-        # 打印或处理红外位信息
-        print(f"L_A: {self.infrared_bits[2]}, L_B: {self.infrared_bits[3]}, R_B: {self.infrared_bits[4]}, "
-              f"R_A: {self.infrared_bits[5]}, infrared_flag : {self.infrared_bits[6]}, Charging flag: {self.infrared_bits[7]}")
+            # 打印或处理红外位信息
+            print(f"L_A: {self.infrared_bits[2]}, L_B: {self.infrared_bits[3]}, R_B: {self.infrared_bits[4]}, "
+                f"R_A: {self.infrared_bits[5]}, infrared_flag : {self.infrared_bits[6]}, Charging flag: {self.infrared_bits[7]}")
 
     def read_serial_data(self):
         """读取串口数据并解析"""
-        while not rospy.is_shutdown():
+        while not self.shutdown:
             if self.ser.in_waiting > 0:
                 byte = self.ser.read(1)   # 读取一个字节
 
@@ -183,13 +210,23 @@ class SerialCANParser:
             self.send_at_commands(["AT+CG", "AT+AT"])
 
             # 开始读取数据
-            self.read_serial_data()
-
+            while True:
+                x_speed,z_speed,which_mode,infrared_bits = parser.read_serial_data()
+                if infrared_bits[7] == 0 :
+                    if(which_mode) == 0x01:
+                        pass
+                    elif (which_mode) == 0xAA: # 充电区 
+                        break
+                    elif (which_mode) == 0xCF:
+                        break
+                else:
+                    break
+                
         except KeyboardInterrupt:
             print("手动中止程序。")
         finally:
             self.close_serial()
 
 if __name__ == '__main__':
-    parser = SerialCANParser('/dev/ttyUSB0', 9600, 1)
+    parser = SerialCANParser('/dev/ttyUSB0', 9600, 1,True)
     parser.start()
