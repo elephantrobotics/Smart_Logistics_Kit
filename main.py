@@ -8,6 +8,7 @@ import sys
 import os
 import numpy as np
 import Jetson.GPIO as GPIO
+import glob
 
 from pymycobot.mecharm270 import MechArm270
 from pymycobot.utils import get_port_list
@@ -24,6 +25,44 @@ from geometry_msgs.msg import Point
 from geometry_msgs.msg import Twist
 from geometry_msgs.msg import PoseWithCovarianceStamped
 from tf.transformations import quaternion_from_euler
+
+def detect_devices():
+    device_status={
+        'active_arm':'/dev/ttyACM0',
+        'dctive_camera':'/dev/video1',
+        'arm_found':False,
+        'camera_found':False
+    }
+
+    if os.path.exists('/dev'):
+        serial_ports = glob.glob('/dev/ttyACM*') + glob.glob('/dev/ttyUSB*')
+        device_status['arm_available'] = serial_ports
+
+        if '/dev/ttyACM0' in serial_ports:
+            device_status['arm_found'] = True
+        elif serial_ports:
+            device_status['active_arm'] = serial_ports[0]
+    
+    
+    if os.path.exists('/dev'):
+        camera_ports = glob.glob('/dev/video*')
+        device_status['camera_available'] = camera_ports
+
+        if '/dev/video1' in camera_ports:
+            device_status['camera_found'] = True
+            detected_camera = 'video1'
+        elif '/dev/video2' in camera_ports:
+            device_status['active_camera'] = '/dev/video2'
+            device_status['camera_found'] = True
+            detected_camera = 'video2'
+    
+    if detected_camera:
+        print(f"Camera detected as availabel: {detected_camera}")
+    else:
+        print("No available camera detected")
+
+    return device_status    
+
 
 class MapNavigation:
     def __init__(self):
@@ -205,7 +244,7 @@ def pick(angle_watch,box_height,pick_times=1):
                 wait()
 
                 scanner = None
-                scanner = QRCodeScanner()
+                scanner = QRCodeScanner(device_status['dctive_camera'])
                 break
 
             else:
@@ -322,23 +361,23 @@ if __name__ == '__main__':
     ]
 
     box_goals_1 = [
-        [0.5966848731040955,-0.3366346061229706,-0.6758443687669797,0.7370443604057783],#1号盒子姿态
-        [0.01773279905319214,-0.3184984624385834,-0.6625018822643105,0.7490602485756707]#2号盒子姿态
+        [0.08485770225524902,-0.11438778042793274,-0.7170147446397785,0.6970580004340766],#1号盒子位姿
+        [0.7079846858978271,-0.13074418902397156,-0.6723159317868799,0.7402643364809218]#2号盒子位姿
     ]
 
     goal_1 = [-0.7349843764305115,0.24553439617156982,0.8816407909804326,0.471921090521919]#中间一号点,姿态朝前
     goal_1_back = [-0.7391788959503174,0.2486436188220978,-0.468811666883722,0.8832981495473123]#中间一号点,姿态朝后
     
-    pack_goal = [0.6559188365936279,0.064272940158844,0.006805813950087559,0.9999768401800497]#快递分拣盒附近
+    pack_goal = [0.5767872333526611,0.04532311737537384,0.06401975195944533,0.9979486316234173]#快递分拣盒附近
     charge_goal =[-0.5688837170600891,-0.31650811433792114,0.4588518939959322,0.8885127682686084]
 
-    pack_pose = [1.0198508501052856,0.24185414612293243,0.06337628811906951,0.9979897024039119,0.06853892326654787]
+    pack_pose = [0.8529961109161377,0.050533026456832886,0.0112260354743728,0.9999369860783869,0.06853892326654787]
 
     angle_table = {
     "zero_position":[0,0,0,0,0,0],
     "move_init":[90.06, -30.41, 22.14, -1.05, 87.45, 0.39],
     "pick_init":[5.44, 6.5, -13.09, -2.54, 81.82, -4.3],
-    "pick_watch":[94.13, 15.2, -21.88, 0.96, 90.79, 4.57],    #相机拍照位2,中心点快递盒子
+    "pick_watch":[94.13, 10.2, -21.88, 0.96, 90.79, 0.0],    #相机拍照位2,中心点快递盒子
     "pick_point2":[-57.91, 0.61, -8.34, 6.32, 19.24, -2.19],    #抓取过渡点
     "place_init":[-93.6, 1.93, 6.24, -0.17, 68.81, -6.24],
     "place_point2":[-7.11, -5.62, -14.85, 0.87, 77.95, -10.37],
@@ -358,24 +397,35 @@ if __name__ == '__main__':
 
     # initialized = True # 导航初始动作
     USB_CAN_Enable = False # 是否开启充电装置通信
-    box_2_height = 101  #快递盒子第二层Z轴高度101,demo2 140
-    box_1_height = 60   #快递盒子第一层Z轴高度60,demo2 90
+    box_2_height = 110  #快递盒子第二层Z轴高度101,demo2 140
+    box_1_height = 80   #快递盒子第一层Z轴高度60,demo2 90
 
     boxes_with_text = []
-    recognized_ocr_texts = ['华中区','华南区'] #固定快递分拣点
+    recognized_ocr_texts = ['华南区','东北区'] #固定快递分拣点
     recognized_ocr = [] # ocr识别添加快递分拣点
     recognized_qr_texts = []
-    PICK_TIMES = 2  # 循环抓取次数
+    PICK_TIMES = 999  # 循环抓取次数
+
+    device_status = detect_devices()
+
+    print("===== Device inspection results ====")
+    print(f"Robotic arm status: {'Found' if device_status['arm_found'] else 'Default port not found,using' + device_status['active_arm']}")
+    print(f"Camera status: {'Found' if device_status['camera_found'] else 'Default port not found,using'}")
+    if 'arm_available' in device_status and device_status['arm_available']:
+        print(f"Available serial ports: {device_status['arm_available']}")
+    if 'camera_avaivle' in device_status and device_status['camera_avaible']:
+        print(f"Avaible cameras: {device_status['camera_avaible']}")
+    print("====================================")
 
     map_navigation = MapNavigation()
     ocr_capture = OCRVideoCapture()
-    scanner = QRCodeScanner()
+    scanner = QRCodeScanner(device_status['dctive_camera'])
     parser = SerialCANParser('/dev/ttyUSB0', 9600, 1)
 
     plist = get_port_list()
     print(plist)
-    mc = MechArm270('/dev/ttyACM0',115200) # 连接机械臂
-    # mc = MechArm270('/dev/ttyACM0',115200,debug=1) # 连接机械臂并打开debug模式
+    # mc = MechArm270('/dev/ttyACM0',115200) # 连接机械臂
+    mc = MechArm270('/dev/ttyACM0',115200,debug=1) # 连接机械臂并打开debug模式
     mc.set_fresh_mode(0)
 
     mc.send_angles(angle_table["move_init"], 50)
@@ -427,21 +477,19 @@ if __name__ == '__main__':
 
         # 根据循环次数抓取,固定相机拍照位和吸取高度
         angle_pick = angle_table["pick_watch"]
-        if i == 0:
+        if i%2 == 0:
             box_height = box_2_height
-        elif i == 1:
-            box_height = box_1_height
-        elif i == 2:
+        else:
             box_height = box_1_height
 
         recognized_qr_texts.append(pick(angle_pick,box_height))  # 发送拍照相机关节角度和Z轴高度，抓取并返回识别文字
 
         # x平移1秒
         map_navigation.pub_vel(-0.1,0,0)
-        time.sleep(2.5)
+        time.sleep(4.5)
         map_navigation.pub_vel(0,0,0)
 
-        # 旋转180°
+        # 右转180°
         map_navigation.pub_vel(0,0,-0.1)
         time.sleep(4)
         map_navigation.pub_vel(0,0,0)
