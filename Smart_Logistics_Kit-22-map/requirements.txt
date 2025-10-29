@@ -1,0 +1,7 @@
+pyzbar
+paddleocr
+paddlepaddle
+Pillow
+opencv-python
+opencv-contrib-python
+numpy
