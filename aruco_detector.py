@@ -32,22 +32,40 @@ def gstreamer_pipeline(
         )
     )
 
-cam = cv2.VideoCapture(gstreamer_pipeline(flip_method=0), cv2.CAP_GSTREAMER)
+cam = None
+
+def init_camera():
+    global cam
+    if cam is None:
+        cam = cv2.VideoCapture(gstreamer_pipeline(flip_method=0), cv2.CAP_GSTREAMER)
+        return cam.isOpened() if cam else False
+    return True
+
+def close_camera():
+    global cam
+    if cam is not None:
+        cam.release()
+        cam = None
+        try:
+            cv2.destroyAllWindows()
+        except:
+            pass
+        print("Camera closed successfully")
+        return True
+    return False
+
+# 摄像头初始化将由调用者控制，不再自动初始化
 
 font = cv2.FONT_HERSHEY_SIMPLEX  # font for displaying text (below)
-ret, frame = cam.read()
-frame = cv2.flip(frame,-1)
 
-width = cam.get(cv2.CAP_PROP_FRAME_WIDTH)
-height = cam.get(cv2.CAP_PROP_FRAME_WIDTH)
-count = cam.get(cv2.CAP_PROP_FRAME_COUNT)
-fps = cam.get(cv2.CAP_PROP_FPS)
+# 预定义常量参数，避免在模块级别访问摄像头
+CAM_WIDTH = 960
+CAM_HEIGHT = 540
+CAM_FPS = 21
 
-print(f"Width: {width}, Height: {height}, Count: {count}, FPS: {fps}") # 960,960,-1,21
-
-size = frame.shape
-focal_length = size[1]
-center = (size[1] / 2, size[0] / 2)
+# 计算中心点和焦距的默认值
+center = (CAM_WIDTH / 2, CAM_HEIGHT / 2)
+focal_length = CAM_WIDTH
 
 # Camera internals 摄像头的内部参数矩阵
 camera_matrix = np.array([[785.855437,  0.000000,   451.670922], 
@@ -94,7 +112,7 @@ print(camera_matrix,dist_coeffs)
 # 0.000000 598.167861 257.740784 0.000000
 # 0.000000 0.000000 1.000000 0.000000
 
-cv2.namedWindow("show",cv2.WINDOW_AUTOSIZE)
+# 窗口创建将在displayFrame函数中进行，避免模块级别初始化
 
 marker_length = 0.04   # -- Here, the measurement unit is metre.0.055 is for orgianl big
 
@@ -159,7 +177,11 @@ def _detect(corners, ids, imgWithAruco):
         :param imgWithAruco:   assign imRemapped_color to imgWithAruco directly
         :return:               x,y,z (units is cm), roll, pitch, yaw (units is degree)
         """
-        if len(corners) > 0:
+        try:
+            # 检查输入参数的有效性
+            if corners is None or len(corners) == 0 or imgWithAruco is None:
+                return None
+            
             x1 = (int(corners[0][0][0][0]), int(corners[0][0][0][1]))
             x2 = (int(corners[0][0][1][0]), int(corners[0][0][1][1]))
             x3 = (int(corners[0][0][2][0]), int(corners[0][0][2][1]))
@@ -181,109 +203,136 @@ def _detect(corners, ids, imgWithAruco):
             cv2.putText(imgWithAruco, 'C4', x4, font, 1, (255, 255, 255), 1,
                         cv2.LINE_AA)
             if ids is not None:   # if aruco marker detected
-                rvec, tvec, _ = cv2.aruco.estimatePoseSingleMarkers(corners, marker_length, camera_matrix,dist_coeffs)
-                for i in range(rvec.shape[0]):
-                    imgWithAruco = cv2.drawFrameAxes(imgWithAruco, camera_matrix,dist_coeffs, rvec, tvec,marker_length)
+                try:
+                    rvec, tvec, _ = cv2.aruco.estimatePoseSingleMarkers(corners, marker_length, camera_matrix, dist_coeffs)
+                    for i in range(rvec.shape[0]):
+                        imgWithAruco = cv2.drawFrameAxes(imgWithAruco, camera_matrix, dist_coeffs, rvec, tvec, marker_length)
 
-                    frame_makers =   aruco.drawDetectedMarkers(imgWithAruco.copy(),corners)
+                    # --- The midpoint displays the ID number
+                    cornerMid = (int((x1[0] + x2[0] + x3[0] + x4[0]) / 4),
+                                 int((x1[1] + x2[1] + x3[1] + x4[1]) / 4))
 
-                # --- The midpoint displays the ID number
-                cornerMid = (int((x1[0] + x2[0] + x3[0] + x4[0]) / 4),
-                             int((x1[1] + x2[1] + x3[1] + x4[1]) / 4))
+                    # 使用传入的imgWithAruco而不是全局的frame
+                    cv2.putText(imgWithAruco, "id=" + str(ids), cornerMid,
+                                font, 1, (255, 255, 255), 1, cv2.LINE_AA)
 
-                cv2.putText(frame, "id=" + str(ids), cornerMid,
-                            font, 1, (255, 255, 255), 1, cv2.LINE_AA)
+                    rvec = rvec[0][0]
+                    tvec = tvec[0][0]
+                    # -- Obtain the rotation matrix tag->camera
+                    R_ct = np.matrix(cv2.Rodrigues(rvec)[0])
+                    R_tc = R_ct.T
+                    # -- Get the attitude in terms of euler 321 (Needs to be flipped first)
+                    roll_marker, pitch_marker, yaw_marker = _rotation_matrix_to_euler_angles(R_flip * R_tc)
 
-                rvec = rvec[0][0]
-                tvec = tvec[0][0]
-                # --- Print the tag position in camera frame
-                str_position = "MARKER Position x=%.4f (cm)  y=%.4f (cm)  z=%.4f (cm)" % (tvec[0] * 100, tvec[1] * 100, tvec[2] * 100)
-                # -- Obtain the rotation matrix tag->camera
-                R_ct = np.matrix(cv2.Rodrigues(rvec)[0])
-                R_tc = R_ct.T
-                # -- Get the attitude in terms of euler 321 (Needs to be flipped first)
-                roll_marker, pitch_marker, yaw_marker = _rotation_matrix_to_euler_angles(R_flip * R_tc)
-                # -- Print the marker's attitude respect to camera frame
-                str_attitude = "MARKER Attitude degrees r=%.4f  p=%.4f  y=%.4f" % (
-                    math.degrees(roll_marker), math.degrees(pitch_marker),
-                    math.degrees(yaw_marker))
+                    pose_data[0] = tvec[0] * 100
+                    pose_data[1] = tvec[1] * 100
+                    pose_data[2] = tvec[2] * 100
+                    pose_data[3] = math.degrees(roll_marker)
+                    pose_data[4] = math.degrees(pitch_marker)
+                    pose_data[5] = math.degrees(yaw_marker)
 
-                pose_data[0] = tvec[0] * 100
-                pose_data[1] = tvec[1] * 100
-                pose_data[2] = tvec[2] * 100
-                pose_data[3] = math.degrees(roll_marker)
-                pose_data[4] = math.degrees(pitch_marker)
-                pose_data[5] = math.degrees(yaw_marker)
+                    # 使用元组作为键，因为数组不能作为字典键
+                    pose_data_dict[str(ids)] = pose_data.copy()
 
-                pose_data_dict[ids] = pose_data
+                    roll_deg = math.degrees(roll_marker)
+                    pitch_deg = math.degrees(pitch_marker)
+                    yaw_deg = math.degrees(yaw_marker)
 
-                roll_deg = math.degrees(roll_marker)
-                pitch_deg = math.degrees(pitch_marker)
-                yaw_deg = math.degrees(yaw_marker)
-
-                if abs(yaw_deg)%90.0 < 30:
-                    return [tvec[0] * 100, tvec[1] * 100, tvec[2] * 100 , roll_deg, pitch_deg ,yaw_deg, cornerMid]
-                else:
-                    return None
-
-        else:
-            pose_data[0] = None
-            pose_data[1] = None
-            pose_data[2] = None
-            pose_data[3] = None
-
-            pose_data_dict[0] = pose_data
-            return None
+                    if abs(yaw_deg) % 90.0 < 30:
+                        return [tvec[0] * 100, tvec[1] * 100, tvec[2] * 100, roll_deg, pitch_deg, yaw_deg, cornerMid]
+                except Exception:
+                    pass
+        except Exception:
+            pass
+        
+        # 发生错误或未检测到有效标记时，重置pose_data并返回None
+        pose_data[0] = None
+        pose_data[1] = None
+        pose_data[2] = None
+        pose_data[3] = None
+        pose_data_dict[0] = pose_data.copy()
+        return None
 
 def displayFrame(frame_input):
-    cv2.imshow("show", frame_input)
-    cv2.waitKey(1)
+    try:
+        # 确保窗口存在
+        if not cv2.getWindowProperty("show", cv2.WND_PROP_VISIBLE):
+            cv2.namedWindow("show", cv2.WINDOW_AUTOSIZE)
+        cv2.imshow("show", frame_input)
+        # 使用更小的waitKey值以减少延迟，但保持窗口响应
+        cv2.waitKey(1)
+    except Exception:
+        # 忽略显示相关的错误，确保程序继续运行
+        pass
 
 def getArucoCode(display_mode = True ):
-    #while True: 
-        # read frame once
+    global cam
+    # 检查摄像头是否已关闭或未初始化
+    if cam is None or not cam.isOpened():
+        return None
+    
+    # read frame once
     frame_makers = None
-    ret, frame = cam.read() #获取相机的数据流
-    frame = cv2.flip(frame,-1) #垂直镜像翻转
-    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY) #灰度化
-    aruco_dict = cv2.aruco.getPredefinedDictionary(aruco.DICT_6X6_250) #设置预定义的字典
-    
-    parameters = cv2.aruco.DetectorParameters() #使用默认值初始化检测器参数
-    
-    corners, ids, rejectedImgPoints = aruco.detectMarkers(gray, aruco_dict, parameters=parameters) #使用aruco.detectMarkers()函数可以检测到marker，返回ID和标志板的4个角点坐标
+    try:
+        ret, frame = cam.read() #获取相机的数据流
+        if not ret or frame is None:
+            return None
+        
+        frame = cv2.flip(frame,-1) #垂直镜像翻转
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY) #灰度化
+        aruco_dict = cv2.aruco.getPredefinedDictionary(aruco.DICT_6X6_250) #设置预定义的字典
+        
+        parameters = cv2.aruco.DetectorParameters() #使用默认值初始化检测器参数
+        
+        corners, ids, rejectedImgPoints = aruco.detectMarkers(gray, aruco_dict, parameters=parameters) #使用aruco.detectMarkers()函数可以检测到marker，返回ID和标志板的4个角点坐标
 
-    if ids is not None:
-        frame_makers = aruco.drawDetectedMarkers(frame.copy(),corners,ids)
-        ids_len  = len(ids)
+        if ids is not None:
+            try:
+                frame_makers = aruco.drawDetectedMarkers(frame.copy(), corners, ids)
+                ids_len = len(ids)
 
-        res = []
-        i =0
-        if ids_len > 0:
-            for l in range(ids_len):
-                aruco_res = _detect(corners[i:i+1], ids[i][0], frame) #输入四个角点坐标，计算并返回x,y,z (units is cm), roll, pitch, yaw (units is degree),Aruco id
-                if aruco_res != None:
-                    res.append(aruco_res)
-                i+=1
-                if display_mode :
-                    displayFrame(frame_makers)
-        return (res, ids)
+                res = []
+                i = 0
+                if ids_len > 0:
+                    for l in range(ids_len):
+                        try:
+                            aruco_res = _detect(corners[i:i+1], ids[i][0], frame) #输入四个角点坐标，计算并返回x,y,z (units is cm), roll, pitch, yaw (units is degree),Aruco id
+                            if aruco_res != None:
+                                res.append(aruco_res)
+                        except Exception:
+                            pass  # 忽略单个标记检测的错误
+                        i += 1
+                        if display_mode and frame_makers is not None:
+                            displayFrame(frame_makers)
+                return (res, ids)
+            except Exception:
+                # 如果处理过程出错，尝试显示原始帧
+                if display_mode:
+                    displayFrame(frame)
+                return None
 
-    else:
-        # no data detected
-        frame_makers = frame.copy()
-        if display_mode :
-            displayFrame(frame_makers)
+        else:
+            # no data detected
+            frame_makers = frame.copy()
+            if display_mode:
+                displayFrame(frame_makers)
+            return None
+    except Exception:
         return None
     
     
 def process_qr_data():
+    global cam
+    # 检查摄像头是否已关闭或未初始化
+    if cam is None or not cam.isOpened():
+        return -1
+    
     data_ = getArucoCode(True)
     # print("data_",data_)
     # 例子：data_ ([[13.190542591653859, 0.6577785493956305, 30.57489950772101, 56.677235927555834, -10.703176777425517, -17.524720968623765, (892, 292)]], array([[2]], dtype=int32))
     
     if data_ is not None:
         if data_[0] == []:
-            print("can't not dectet pose estimation of Aruco ")
             return -1   #二维码的marker_length要大，而且marker_length参数要给对,不然没有位姿信息
 
         _z = data_[0][0][2]

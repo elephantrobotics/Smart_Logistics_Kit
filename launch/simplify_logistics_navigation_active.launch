@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <launch>
 
-  <arg name="map_file" default="$(find myagv_navigation)/map/0107_map.yaml"/>
+  <arg name="map_file" default="$(find myagv_navigation)/map/0915_map.yaml"/>
 
   <node name="map_server_for_test" pkg="map_server" type="map_server" args="$(arg map_file)" output="screen">
     <param name="frame_id" value="map"/>
@@ -13,9 +13,9 @@
 
   <node pkg="amcl" type="amcl" name="amcl" output="screen">
     <rosparam file="$(find myagv_navigation)/param/amcl.yaml" command="load" />
-    <param name="initial_pose_x"            value="0.308"/>
-    <param name="initial_pose_y"            value="0.081"/>
-    <param name="initial_pose_a"            value="2.102"/>
+    <param name="initial_pose_x"            value="-0.069"/>
+    <param name="initial_pose_y"            value="0.115"/>
+    <param name="initial_pose_a"            value="-0.035"/>
   </node>      
 
 

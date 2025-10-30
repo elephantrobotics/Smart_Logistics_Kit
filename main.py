@@ -8,6 +8,7 @@ import sys
 import os
 import numpy as np
 import Jetson.GPIO as GPIO
+import glob
 
 from pymycobot.mecharm270 import MechArm270
 from pymycobot.utils import get_port_list
@@ -24,6 +25,42 @@ from geometry_msgs.msg import Point
 from geometry_msgs.msg import Twist
 from geometry_msgs.msg import PoseWithCovarianceStamped
 from tf.transformations import quaternion_from_euler
+
+def detect_devices():
+    device_status={
+        'active_arm':'/dev/ttyACM0',
+        'dctive_camera':'/dev/video1',
+        'arm_found':False,
+        'camera_found':False
+    }
+
+    if os.path.exists('/dev'):
+        serial_ports = glob.glob('/dev/ttyACM*') + glob.glob('/dev/ttyUSB*')
+        device_status['arm_available'] = serial_ports
+
+        if '/dev/ttyACM0' in serial_ports:
+            device_status['arm_found'] = True
+        elif serial_ports:
+            device_status['active_arm'] = serial_ports[0]  
+    
+    if os.path.exists('/dev'):
+        camera_ports = glob.glob('/dev/video*')
+        device_status['camera_available'] = camera_ports
+
+        if '/dev/video1' in camera_ports:
+            device_status['camera_found'] = True
+            detected_camera = 'video1'
+        elif '/dev/video2' in camera_ports:
+            device_status['active_camera'] = '/dev/video2'
+            device_status['camera_found'] = True
+            detected_camera = 'video2'
+    
+    if detected_camera:
+        print(f"Camera detected as availabel: {detected_camera}")
+    else:
+        print("No available camera detected")
+
+    return device_status    
 
 class MapNavigation:
     def __init__(self):
@@ -205,7 +242,7 @@ def pick(angle_watch,box_height,pick_times=1):
                 wait()
 
                 scanner = None
-                scanner = QRCodeScanner()
+                scanner = QRCodeScanner(device_status['dctive_camera'])
                 break
 
             else:
@@ -329,7 +366,7 @@ if __name__ == '__main__':
     goal_1 = [-0.7349843764305115,0.24553439617156982,0.8816407909804326,0.471921090521919]#中间一号点,姿态朝前
     goal_1_back = [-0.7391788959503174,0.2486436188220978,-0.468811666883722,0.8832981495473123]#中间一号点,姿态朝后
     
-    pack_goal = [0.5767872333526611,-0.01532311737537384,0.06401975195944533,0.9979486316234173]#快递分拣盒附近
+    pack_goal = [0.5767872333526611,0.04532311737537384,0.06401975195944533,0.9979486316234173]#快递分拣盒附近
     charge_goal =[-0.5688837170600891,-0.31650811433792114,0.4588518939959322,0.8885127682686084]
 
     pack_pose = [0.8529961109161377,0.050533026456832886,0.0112260354743728,0.9999369860783869,0.06853892326654787]
@@ -358,7 +395,7 @@ if __name__ == '__main__':
 
     # initialized = True # 导航初始动作
     USB_CAN_Enable = False # 是否开启充电装置通信
-    box_2_height = 120  #快递盒子第二层Z轴高度101,demo2 140
+    box_2_height = 110  #快递盒子第二层Z轴高度101,demo2 140
     box_1_height = 80   #快递盒子第一层Z轴高度60,demo2 90
 
     boxes_with_text = []
@@ -367,9 +404,20 @@ if __name__ == '__main__':
     recognized_qr_texts = []
     PICK_TIMES = 999  # 循环抓取次数
 
+    device_status = detect_devices()
+
+    print("===== Device inspection results ====")
+    print(f"Robotic arm status: {'Found' if device_status['arm_found'] else 'Default port not found,using' + device_status['active_arm']}")
+    print(f"Camera status: {'Found' if device_status['camera_found'] else 'Default port not found,using'}")
+    if 'arm_available' in device_status and device_status['arm_available']:
+        print(f"Available serial ports: {device_status['arm_available']}")
+    if 'camera_avaivle' in device_status and device_status['camera_avaible']:
+        print(f"Avaible cameras: {device_status['camera_avaible']}")
+    print("====================================")
+
     map_navigation = MapNavigation()
     ocr_capture = OCRVideoCapture()
-    scanner = QRCodeScanner()
+    scanner = QRCodeScanner(device_status['dctive_camera'])
     parser = SerialCANParser('/dev/ttyUSB0', 9600, 1)
 
     plist = get_port_list()

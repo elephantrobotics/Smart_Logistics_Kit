@@ -1,0 +1,9 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Terminal=true
+Icon=/usr/share/icons/mate/scalable/categories/preferences-system-symbolic.svg
+Icon[en_US]=/usr/share/icons/mate/scalable/categories/preferences-system-symbolic.svg
+Exec=/home/er/Smart_Logistics_Kit/Test_Cam.sh
+Name[en_US]=Test_Cam
+Name=Test_Cam

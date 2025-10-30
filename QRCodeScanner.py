@@ -6,13 +6,13 @@ from PIL import Image, ImageDraw, ImageFont
 import time
 
 class QRCodeScanner:
-    def __init__(self, camera_index=1, font_path="./SIMFANG.TTF", font_size=25):
+    def __init__(self, videoid="/dev/video1",camera_index=1, font_path="./SIMFANG.TTF", font_size=25):
         self.camera_index = camera_index
         self.font_path = font_path
         self.font_size = font_size
         self.font = ImageFont.truetype(self.font_path, self.font_size)
         self.time_out=60
-        self.cap = cv2.VideoCapture("/dev/video1") 
+        self.cap = cv2.VideoCapture(videoid) 
         self.text_color = (0, 255, 0)
         self.camera_matrix = np.array([
             [827.29511682, 0., 368.87666292],
