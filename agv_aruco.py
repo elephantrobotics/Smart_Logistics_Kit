@@ -215,10 +215,6 @@ def move_to_center():
         return 0
     
 # 二维码位置信息读取线程
-<<<<<<< HEAD
-=======
-
->>>>>>> 81cefabd54af51bfb704f3af9e71b3a0f2810ed3
 def qr_data_thread():
     global qr_data, stop_threads, task_completed
     print("QR detection thread started")

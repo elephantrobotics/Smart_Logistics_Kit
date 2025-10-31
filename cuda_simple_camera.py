@@ -10,7 +10,6 @@ import time
 # from PIL import Image, ImageDraw, ImageFont
 # import logging
 
-
 class CameraProcessor:
     def __init__(self, 
                  camera_matrix=np.array([[785.855437, 0.000000, 451.670922], 

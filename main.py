@@ -41,12 +41,7 @@ def detect_devices():
         if '/dev/ttyACM0' in serial_ports:
             device_status['arm_found'] = True
         elif serial_ports:
-<<<<<<< HEAD
             device_status['active_arm'] = serial_ports[0]  
-=======
-            device_status['active_arm'] = serial_ports[0]
-    
->>>>>>> 81cefabd54af51bfb704f3af9e71b3a0f2810ed3
     
     if os.path.exists('/dev'):
         camera_ports = glob.glob('/dev/video*')
@@ -67,10 +62,6 @@ def detect_devices():
 
     return device_status    
 
-<<<<<<< HEAD
-=======
-
->>>>>>> 81cefabd54af51bfb704f3af9e71b3a0f2810ed3
 class MapNavigation:
     def __init__(self):
         self.goalReached = False
