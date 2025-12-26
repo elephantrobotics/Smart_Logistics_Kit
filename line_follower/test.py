@@ -11,14 +11,14 @@ from geometry_msgs.msg import Twist
 
 class image_converter:
     def __init__(self):
-        # 创建cv_bridge，声明图像的发布者和订阅者
+        # Create cv_bridge and declare image publishers and subscribers
         self.publisher = rospy.Publisher("/cmd_vel",Twist,queue_size=1)
         self.image_pub = rospy.Publisher("cv_bridge_image", Image, queue_size=1)
         self.bridge = CvBridge()
         self.image_sub = rospy.Subscriber("/camera/color/image_raw", Image, self.callback)
 
     def callback(self,data):
-        # 使用cv_bridge将ROS的图像数据转换成OpenCV的图像格式
+        # Use cv_bridge to convert ROS image data into OpenCV image format
         try:
             cv_image = self.bridge.imgmsg_to_cv2(data, "bgr8")
         except CvBridgeError as e:
@@ -38,27 +38,27 @@ class image_converter:
         mask[0:search_top, 0:w] =0
         mask[search_bot:h, 0:w] =0
 
-        # 计算掩码的质心
+        # Calculate the centroid of the mask
         M = cv2.moments(mask)
         if M['m00'] > 0:
             cx = int(M['m10']/M['m00'])
             cy = int(M['m01']/M['m00'])
-            # 在质心位置绘制红色圆点
+            # Draw a red dot at the center of mass
             cv2.circle(cv_image,(cx,cy),20,(0,0,255),-1)
-            # 控制逻辑
+            # Control logic
             # err = cx -w/2
             # twist = Twist()
             # twist.linear.x = 0.01
             # twist.angular.z = -float(err) /500
             # self.publisher.publish(twist)
 
-        # 显示Opencv格式的图像
+        # Show the OpenCV image
         cv2.imshow("Image window", cv_image)
         cv2.waitKey(3)
 
 if __name__ == '__main__':
     try:
-        # 初始化ros节点
+        # Initialize the ROS node
         rospy.init_node("cv_bridge_test")
         rospy.loginfo("Starting cv_bridge_test node")
         image_converter()

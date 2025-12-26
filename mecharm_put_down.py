@@ -100,7 +100,7 @@ class MapNavigation:
         twist.angular.z = theta
         self.pub.publish(twist)
 
-    # 吸泵控制函数
+    # Suction Pump Control Function
     def pump_on(self):
         GPIO.output(26, GPIO.LOW)
         GPIO.output(19, GPIO.HIGH)
@@ -113,16 +113,16 @@ class MapNavigation:
        
 def pick(angle_watch,box_height,pick_times=1):
     global scanner 
-    mc.send_angles(angle_watch, 80) # 相机拍照位
+    mc.send_angles(angle_watch, 80) # Camera pose
     wait()
 
     while True :
-        qr_texts,tvecs =scanner.start_capture() # 获取QR码城市信息和tvec位移矩阵
+        qr_texts,tvecs =scanner.start_capture() # Get QR code city information and tvec displacement matrix
         time.sleep(1)
         print("qr_texts",qr_texts)
         
         if qr_texts is not None : 
-            curr_coords = mc.get_coords() # 获取当前位姿
+            curr_coords = mc.get_coords() # Get current pose
             print("curr_coords",curr_coords)
             time.sleep(2)
         else:
@@ -135,7 +135,7 @@ def load():
     mc.send_angles(angle_table["place_init"], 50)
     wait()
 
-    coords_s = mc.get_coords() #获取当前位姿
+    coords_s = mc.get_coords() # Get current pose
     print(coords_s)
     wait()
     
@@ -147,7 +147,7 @@ def load():
             break
 
     coords_s[2]-=70
-    mc.send_coords(coords_s,40,mode=1) #z轴下降
+    mc.send_coords(coords_s,40,mode=1) # z-axis lowering
     wait()
     map_navigation.pump_on()
     wait()
@@ -165,7 +165,7 @@ def load():
             break
 
     coords_s[2]+=70
-    mc.send_coords(coords_s,40,mode=1) #z轴抬高
+    mc.send_coords(coords_s,40,mode=1) # z-axis lifting
     wait()
 
     mc.send_angles(angle_table["place_point4"], 50)
@@ -180,36 +180,36 @@ def load():
     map_navigation.pump_off()
     time.sleep(2)
 
-    # 结束后复位
+    # Reset after completion
     mc.send_angles(angle_table["move_init"], 50)
     wait()
 
 
 def ocr_recognized():
-    # 目标点列表，按照你给定的顺序组织
+    # List of target points, organized according to the order you provided
     goals_sequence = [
-        (box_goals_0[0], box_goals_2[0], box_goals_2[1]),  # box_goals_0 1号点 -> box_goals_2 1号、2号点
-        (box_goals_0[1], box_goals_2[2], box_goals_2[3]),  # box_goals_0 2号点 -> box_goals_2 3号、4号点
-        (box_goals_0[2], box_goals_2[4])                   # box_goals_0 3号点 -> box_goals_2 5号点
+        (box_goals_0[0], box_goals_2[0], box_goals_2[1]),  # box_goals_0 1 point -> box_goals_2 1 point, 2 point
+        (box_goals_0[1], box_goals_2[2], box_goals_2[3]),  # box_goals_0 2 point -> box_goals_2 3 point, 4 point
+        (box_goals_0[2], box_goals_2[4])                   # box_goals_0 3 point -> box_goals_2 5 point
     ]
 
-    # 遍历目标点顺序进行导航
+    # Navigate by traversing the sequence of target points
     for goal_set in goals_sequence:
         for i, goal in enumerate(goal_set):
             
-            # 目标坐标
+            # Target coordinates
             x_goal, y_goal, orientation_z, orientation_w = goal
-            print(f"导航到目标点: x={x_goal}, y={y_goal}, 方向z={orientation_z}, 方向w={orientation_w}")
+            print(f"Navigate to the target point: x={x_goal}, y={y_goal}, Direction z={orientation_z}, Direction w={orientation_w}")
             
-            # 执行导航
+            # Execute navigation
             flag_feed_goalReached = map_navigation.moveToGoal(x_goal, y_goal, orientation_z, orientation_w)
             
-            # 根据是否到达目标执行OCR识别
+            # Execute OCR recognition based on whether the target is reached
             if flag_feed_goalReached:
                 if i > 0:                    
-                    recognized_ocr_texts.append(ocr_capture.start_capture())  # 识别文字，存储盒子的变量
+                    recognized_ocr_texts.append(ocr_capture.start_capture())  # Recognize text and store box variable
             else:
-                recognized_ocr_texts.append(None)  # 如果目标未到达，追加None
+                recognized_ocr_texts.append(None)  # If the target is not reached, append None
 
 def signal_handler(signal, frame):
     print("Ctrl+C pressed. Exiting...")
@@ -230,28 +230,28 @@ if __name__ == '__main__':
     os.system('python OCRVideoCapture.py')
 
     print("python agv_aruco")
-    os.system('python agv_aruco.py')    # 导航目标点
+    os.system('python agv_aruco.py')    # Navigation target point
     
     angle_table = {
     "zero_position":[0,0,0,0,0,0],
     "move_init":[90.06, -30.41, 22.14, -1.05, 87.45, 0.39],
     "pick_init":[5.44, 6.5, -13.09, -2.54, 81.82, -4.3],
-    "pick_watch":[94.13, 15.2, -21.88, 0.96, 90.79, 4.57],    #相机拍照位2,中心点快递盒子
-    "pick_point2":[-57.91, 0.61, -8.34, 6.32, 19.24, -2.19],    #抓取过渡点
+    "pick_watch":[94.13, 15.2, -21.88, 0.96, 90.79, 4.57],    #Camera photo position 2, center point of the delivery box
+    "pick_point2":[-57.91, 0.61, -8.34, 6.32, 19.24, -2.19],    #Capture transition point
     "place_init":[-93.6, 1.93, 6.24, -0.17, 68.81, -6.24],
     "place_point2":[-7.11, -5.62, -14.85, 0.87, 77.95, -10.37],
-    "place_point3":[90.0, 22.5, -12.48, 2.54, 50.27, -0.35],    #放盒子点位
+    "place_point3":[90.0, 22.5, -12.48, 2.54, 50.27, -0.35],    #Place box position
     "place_point4":[-95.36, 7.03, -22.85, -3.07, 87.89, 1.46]
     }
     map_navigation = MapNavigation()
     parser = SerialCANParser('/dev/ttyUSB0', 9600, 1)
     
-    mc = MechArm270('/dev/ttyACM0',115200) # 连接机械臂
+    mc = MechArm270('/dev/ttyACM0',115200) # Connect to the mecharm
     mc.set_fresh_mode(0)
     mc.send_angles(angle_table["move_init"], 50)
     wait()
                         
-    load()  #放盒子
+    load()  #Put the box down
     map_navigation.pub_vel(-0.1,0,0)
     time.sleep(5.7)
     map_navigation.pub_vel(0,0,0)

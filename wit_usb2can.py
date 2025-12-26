@@ -6,187 +6,189 @@ import time
 
 class SerialCANParser:
     def __init__(self, serial_port='/dev/ttyUSB0', baudrate=9600, timeout=1):
-        self.serial_port = serial_port  # 串口名称
-        self.baudrate = baudrate  # 波特率
-        self.timeout = timeout  # 超时设置
-        self.ser = None  # 串口对象
-        self.buffer = bytearray()  # 存储当前读取的字节
-        self.max_retries = 3  # 最大重试次数
+        self.serial_port = serial_port  # Serial Port Name
+        self.baudrate = baudrate  # Baud Rate
+        self.timeout = timeout  # Timeout Setting
+        self.ser = None  # Serial Port Object
+        self.buffer = bytearray()  # Storage for Currently Read Bytes
+        self.max_retries = 3  # Maximum Retry Times
 
-        # 存储实时数据
+        # Real-time Data Storage
         self.x_speed = 0.0
         self.z_speed = 0.0
         self.infrared_bits = []
 
     def open_serial(self):
-        """打开串口"""
+        """Open the serial port"""
         try:
             self.ser = serial.Serial(self.serial_port, self.baudrate, timeout=self.timeout)
-            print(f"串口 {self.serial_port} 已打开，波特率：{self.baudrate}")
+            print(f"Serial port {self.serial_port} has been successfully opened, baud rate: {self.baudrate}")
         except Exception as e:
-            print(f"打开串口失败: {e}")
+            print(f"Failed to open serial port: {e}")
 
     def close_serial(self):
-        """关闭串口"""
+        """Close the serial port"""
         if self.ser and self.ser.is_open:
             self.ser.close()
-            print("串口已关闭。")
+            print("Serial port has been successfully closed.")
         else:
-            print("串口未打开或已关闭。")
+            print("Serial port is not open or has already been closed.")
 
     def can_id_check(self,date):
         high_byte,low_byte = date[0:2]
-        # 高字节左移 3 位
+        # High byte left shift 3 bits
         can_id = (high_byte << 3)
-        # 低字节右移 5 位
+        # Low byte right shift 5 bits
         can_id |= (low_byte >> 5)
 
         return can_id
 
     def parse_can_data(self, data):
-        """解析8字节CAN数据帧"""
+        """Parse 8-byte CAN data frame"""
         if len(data) != 8:
-            print("数据帧长度不正确")
+            print("Data frame length is not 8 bytes")
             return None
 
-        # 解析 X、Y 和 Z 速度
-        x_speed_raw = ((data[0] << 8) | data[1])  # X速度的原始数据
-        z_speed_raw = ((data[4] << 8) | data[5])  # Z速度的原始数据
+        # Parse X, Y, and Z speeds
+        x_speed_raw = ((data[0] << 8) | data[1])  # X speed raw data
+        z_speed_raw = ((data[4] << 8) | data[5])  # Raw data of Z velocity
 
-        # 将原始数据转换为浮动数值，并考虑正负
-        if x_speed_raw & 0x8000:  # 如果最高位为1，表示负数
-            x_speed_raw = -((65536 - x_speed_raw) & 0xFFFF)  # 补码转换为负数
+        # Convert the raw data to floating-point numbers, considering both positive and negative values
+        if x_speed_raw & 0x8000:  # If the highest bit is 1, it means a negative number
+            x_speed_raw = -((65536 - x_speed_raw) & 0xFFFF)  # Convert to negative number using two's complement
 
-        if z_speed_raw & 0x8000:  # 如果最高位为1，表示负数
-            z_speed_raw = -((65536 - z_speed_raw) & 0xFFFF)  # 补码转换为负数
+        if z_speed_raw & 0x8000:  # If the highest bit is 1, it means a negative number
+            z_speed_raw = -((65536 - z_speed_raw) & 0xFFFF)  # Convert to negative number using two's complement
 
-        # 转换单位为 m/s 和 rad/s
-        self.x_speed = x_speed_raw / 1000.0  # X速度单位为 m/s
-        self.y_speed = 0  # Y速度为0
-        self.z_speed = z_speed_raw / 1000.0  # Z速度单位为 rad/s
+        # Convert units to m/s and rad/s
+        self.x_speed = x_speed_raw / 1000.0  # X speed unit is m/s
+        self.y_speed = 0  # Y speed is 0
+        self.z_speed = z_speed_raw / 1000.0  # Z speed unit is rad/s
 
         self.which_mode = data[2]
 
-        self.infrared = data[6]  # 红外数据
-        self.raw_current = data[7]  # 电流数据
+        self.infrared = data[6]  # Infrared data
+        self.raw_current = data[7]  # Current data
 
-        if self.raw_current > 32767:  # 无符号数大于 32767 表示负值（因为最大值是 65535）
-            # 转换为负数
+        if self.raw_current > 32767:  # Unsigned number greater than 32767 means negative value (max value is 65535)
+            # Convert to negative number using two's complement
             self.actual_current = -(65536 - self.raw_current) * 30.0
         else:
-            # 正数直接转换
+            # Positive number directly convert
             self.actual_current = self.raw_current * 30.0
 
-        # 处理红外数据
+        # Process infrared data
         self.infrared_bits = [(self.infrared >> (7 - i)) & 0x01 for i in range(8)]
 
-        # 打印或处理数据
+        # Print or process data
         print(f"X Speed: {self.x_speed:.3f}, Y Speed: {self.y_speed}, Z Speed: {self.z_speed:.3f}, "
               f"Actual Current: {self.actual_current:.3f} mA, Infrared: {self.infrared}")
 
-        # 打印或处理红外位信息
+        # Print or process infrared bit information
         print(f"L_A: {self.infrared_bits[2]}, L_B: {self.infrared_bits[3]}, R_B: {self.infrared_bits[4]}, "
               f"R_A: {self.infrared_bits[5]}, infrared_flag : {self.infrared_bits[6]}, Charging flag: {self.infrared_bits[7]}")
 
     def read_serial_data(self):
-        """读取串口数据并解析"""
+        """Read serial data and parse"""
         while not rospy.is_shutdown():
             if self.ser.in_waiting > 0:
-                byte = self.ser.read(1)   # 读取一个字节
+                byte = self.ser.read(1)   # Read a byte
 
                 if len(self.buffer) < 2:
                     self.buffer.extend(byte)  
                     if len(self.buffer) == 2:
-                        # 如果帧头为 0x41 0x54，表示为AT帧头，则开始接收数据
+                        # If the frame header is 0x41 0x54, indicating an AT frame header, then start receiving data.
                         if self.buffer[0] != 0x41 or self.buffer[1] != 0x54:
-                            # 如果不是有效的帧头，则清空缓冲区并跳到下次循环
+                            # If it is not a valid frame header, clear the buffer and jump to the next loop.
                             self.buffer.clear()
-                            continue  # 继续等待下一个字节                 
+                            continue  # Continue waiting for the next byte                 
 
                 else:
                     self.buffer.extend(byte)
 
-                    # print("缓冲区内容:", ' '.join(f'{b:02x}' for b in self.buffer)) # debug
+                    # Print or process the buffer content (for debugging)
+                    # print("Buffer content:", ' '.join(f'{b:02x}' for b in self.buffer)) # debug
 
-                    # 如果缓冲区字节长度大于等于 17 字节（数据帧长度）
+                    # If the buffer byte length is greater than or equal to 17 bytes (data frame length)
                     if len(self.buffer) >= 17:
 
                         # print("Received Frame (Hex):", ' '.join(f'{byte:02x}' for byte in self.buffer)) # debug
 
-                        # 解析帧头、CAN帧ID、格式、类型和数据
-                        # at_frame_header = self.buffer[0:2]  # AT帧头
-                        can_frame_id = self.can_id_check(self.buffer[2:4])  # CAN标准帧ID
-                        # can_frame_format = self.buffer[4]  # CAN帧格式（0,标准帧;1,扩展帧）
-                        # can_frame_type = self.buffer[5]  # CAN帧类型（0,数据帧;1,远程帧）
-                        data_length = self.buffer[6]  # 数据长度
-                        data = self.buffer[7:15]  # 数据帧
+                        # Parse frame header, CAN frame ID, format, type, and data
+                        # at_frame_header = self.buffer[0:2]  # AT frame header
+                        can_frame_id = self.can_id_check(self.buffer[2:4])  # CAN standard frame ID
+                        # can_frame_format = self.buffer[4]  # CAN frame format (0, standard frame; 1, extended frame)
+                        # can_frame_type = self.buffer[5]  # CAN frame type (0, data frame; 1, remote frame)
+                        data_length = self.buffer[6]  # Data length
+                        data = self.buffer[7:15]  # Data frame
 
-                        # print(f"帧ID: 0x{can_frame_id:X}")    # debug
+                        # print(f"Frame ID: 0x{can_frame_id:X}")    # debug
 
-                        if can_frame_id == 0x182 and data_length == 0x08: # 根据can帧id进行判断
-                            # 如果帧ID为0x182,校验通过,进行数据赋值
+                        if can_frame_id == 0x182 and data_length == 0x08: # Determine based on the CAN frame ID and data length
+                            # If the frame ID is 0x182 and the data length is 0x08, then it is a valid data frame.
+                            # Assign data to variables
                             self.parse_can_data(data)
 
-                            # 清空缓冲区，准备下一帧数据
+                            # Clear the buffer, ready for the next frame of data
                             self.buffer.clear()
                             return self.x_speed, self.z_speed, self.which_mode, self.infrared_bits   # 返回解析后的数据
                         else:
-                            # 清空缓冲区，准备下一帧数据
+                            # If it is not a valid data frame, clear the buffer and jump to the next loop.
                             self.buffer.clear()
 
     def read_serial_response(self):
-        """读取串口响应数据，直到接收到 '\r\n' 或超时"""
-        response = bytearray()  # 使用 bytearray 来存储原始字节流
+        """Read serial response data until '\r\n' is received or timeout"""
+        response = bytearray()  # Use bytearray to store raw byte stream
         while True:
             if self.ser.in_waiting > 0:
                 byte = self.ser.read(1)
                 response += byte
 
-            # 检查是否已接收到完整响应
+            # Check if '\r\n' is in the response, indicating the end of the frame
             if b'\r\n' in response:
                 break
 
-            # 超时机制，防止死循环
+            # Timeout mechanism to prevent infinite loops
             if len(response) > 100:
                 break
 
-        return bytes(response)  # 返回原始字节流（bytes）
+        return bytes(response)  # Return raw byte stream (bytes)
 
     def send_at_commands(self, commands):
-        """发送 AT 命令并等待响应"""
+        """Send AT commands and wait for responses"""
         for command in commands:
             retries = 0
             while retries < self.max_retries:
                 self.ser.write(command.encode() + b'\r\n')
-                print(f"发送命令: {command}")
+                print(f"Send command: {command}")
 
-                # 等待响应并读取数据
+                # Wait for response and read data
                 response = self.read_serial_response()
 
-                # 检查响应是否包含 "OK"
+                # Check if "OK" is in the response
                 if b"OK" in response:
-                    print(f"收到响应: {response}")
-                    break  # 如果收到 OK，退出重试循环
+                    print(f"Received response: {response}")
+                    break  # If OK is received, exit the retry loop
                 else:
                     retries += 1
-                    print(f"未收到预期的响应，收到: {response}")
+                    print(f"Did not receive expected response, received: {response}")
 
             if retries == self.max_retries:
-                print(f"重试 {self.max_retries} 次后仍未收到有效响应，请检查设备。")
+                print(f"After {self.max_retries} retries, no valid response was received. Please check the device.")
                 break
 
     def start(self):
-        """开始读取和处理数据"""
+        """Start reading and processing data"""
         self.open_serial()
         try:
-            # 发送AT 命令从透传模式进入AT指令模式
+            # Send AT commands to enter AT command mode from transparent mode
             self.send_at_commands(["AT+CG", "AT+AT"])
 
-            # 开始读取数据
+            # Start reading data
             self.read_serial_data()
 
         except KeyboardInterrupt:
-            print("手动中止程序。")
+            print("Manually interrupted the program.")
         finally:
             self.close_serial()
 

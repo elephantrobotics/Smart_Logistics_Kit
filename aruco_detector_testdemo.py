@@ -7,8 +7,8 @@ import math
 
 class CameraProcessor:
     def __init__(self, camera_matrix, dist_matrix, marker_length=0.04):
-        self.frame_queue_capture = queue.Queue(maxsize=2)  # 用于捕获帧
-        self.frame_queue_process = queue.Queue(maxsize=2)  # 用于处理帧
+        self.frame_queue_capture = queue.Queue(maxsize=2)  # Queue for capturing frames
+        self.frame_queue_process = queue.Queue(maxsize=2)  # Queue for processing frames
         self.pose_data = [None, None, None, None, None, None]
         self.pose_data_dict = {}
         
@@ -20,7 +20,7 @@ class CameraProcessor:
         self.R_flip[1, 1] = -1.0
         self.R_flip[2, 2] = -1.0
     
-    # GStreamer管道函数
+    # GStreamer pipeline functions
     @staticmethod
     def gstreamer_pipeline(sensor_id=0, capture_width=3264, capture_height=2464, display_width=960, display_height=540, framerate=21, flip_method=0):
         return (
@@ -127,7 +127,7 @@ class CameraProcessor:
             ret_val, frame = cap.read()
             if ret_val:
                 if self.frame_queue_capture.full():
-                    self.frame_queue_capture.get()  # 丢弃队列中最旧的帧
+                    self.frame_queue_capture.get()  # Discard the oldest frame in the queue
                 self.frame_queue_capture.put(frame)
 
     def process_frames(self):
@@ -135,8 +135,8 @@ class CameraProcessor:
             if not self.frame_queue_capture.empty():
                 frame = self.frame_queue_capture.get()
 
-                frame = cv2.flip(frame, -1)  # 垂直镜像翻转
-                gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)  # 灰度化
+                frame = cv2.flip(frame, -1)  # Vertical flip
+                gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)  # Grayscale
 
                 aruco_dict = cv2.aruco.getPredefinedDictionary(aruco.DICT_6X6_250)
                 parameters = cv2.aruco.DetectorParameters()
@@ -159,13 +159,13 @@ class CameraProcessor:
                         print("ry", _ry)
                         print("perc", _perc)
                         
-                # 将处理后的图像放入处理队列
+                # Put the processed image into the processing queue
                 if not self.frame_queue_process.full():
                     self.frame_queue_process.put(frame)
 
-            # 检查用户是否关闭窗口
+            # Check if the user has closed the window
             keyCode = cv2.waitKey(1) & 0xFF
-            if keyCode == 27 or keyCode == ord('q'):  # ESC键或 'q' 键退出
+            if keyCode == 27 or keyCode == ord('q'):  # ESC key or 'q' key to exit
                 break
 
         cv2.destroyAllWindows()
@@ -178,7 +178,7 @@ class CameraProcessor:
                 cv2.imshow(window_title, frame)
 
             keyCode = cv2.waitKey(1) & 0xFF
-            if keyCode == 27 or keyCode == ord('q'):  # ESC键或 'q' 键退出
+            if keyCode == 27 or keyCode == ord('q'):  # Press the ESC key or the 'q' key to exit
                 break
 
     def show_camera(self):

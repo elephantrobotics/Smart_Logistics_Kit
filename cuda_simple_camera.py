@@ -10,6 +10,7 @@ import time
 # from PIL import Image, ImageDraw, ImageFont
 # import logging
 
+
 class CameraProcessor:
     def __init__(self, 
                  camera_matrix=np.array([[785.855437, 0.000000, 451.670922], 
@@ -18,8 +19,8 @@ class CameraProcessor:
                  dist_matrix=np.array([0.095135, -0.109279, -0.002513, -0.002433, 0.000000], dtype=np.float32),
                  marker_length=0.04):
         
-        self.frame_queue_capture = queue.Queue(maxsize=2)  # 用于捕获帧
-        self.frame_queue_process = queue.Queue(maxsize=2)  # 用于处理帧
+        self.frame_queue_capture = queue.Queue(maxsize=2)  # For capturing frames
+        self.frame_queue_process = queue.Queue(maxsize=2)  # For processing frames
 
         # Initialize pose data (translation, rotation, and position)
         self.pose_data = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, (0.0, 0.0)]
@@ -35,7 +36,7 @@ class CameraProcessor:
         self.R_flip[1, 1] = -1.0
         self.R_flip[2, 2] = -1.0
 
-        self.loop_mode = True  # 默认循环运行
+        self.loop_mode = True  # Loop running by default
 
         # ocr 
         # logging.getLogger('ppocr').setLevel(logging.WARNING)
@@ -46,7 +47,7 @@ class CameraProcessor:
         # self.time_out=30
         # self.start_time=time.time()
 
-    # GStreamer管道函数
+    # GStreamer pipeline function
     @staticmethod
     def gstreamer_pipeline(sensor_id=0, capture_width=3264, capture_height=2464, display_width=960, display_height=540, framerate=21, flip_method=2):
         return (
@@ -166,7 +167,7 @@ class CameraProcessor:
             if not self.frame_queue_capture.empty():
                 frame = self.frame_queue_capture.get()
 
-                gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)  # 灰度化
+                gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)  # Convert to grayscale
 
                 aruco_dict = cv2.aruco.getPredefinedDictionary(aruco.DICT_6X6_250)
                 parameters = cv2.aruco.DetectorParameters()
@@ -178,13 +179,13 @@ class CameraProcessor:
                     for i in range(ids_len):
                         self._detect(corners[i:i + 1], ids[i][0], frame)
              
-                # 将处理后的图像放入处理队列
+                # Put processed image into processing queue
                 if not self.frame_queue_process.full():
                     self.frame_queue_process.put(frame)
 
-            # 检查用户是否关闭窗口
+            # Check if user closes window
             keyCode = cv2.waitKey(1) & 0xFF
-            if keyCode == 27 or keyCode == ord('q'):  # ESC键或 'q' 键退出
+            if keyCode == 27 or keyCode == ord('q'):  # Press ESC or 'q' to exit
                 break
 
         cv2.destroyAllWindows()
@@ -202,10 +203,10 @@ class CameraProcessor:
    
     def process_aruco_realtime(self):
         if self.video_capture.isOpened():
-            self.running = True  # 确保程序运行
-            capture_thread = threading.Thread(target=self.capture_frames, args=(self.video_capture,)) #线程一：获取最新的数据帧，丢弃队列中最旧的帧
-            process_thread = threading.Thread(target=self.process_frames) #线程二：根据最新的数据帧，处理Aruco码，获得姿态和中心点像素坐标数据
-            display_thread = threading.Thread(target=self.display_processed_frames, args=(self.frame_queue_process,)) # 线程三：显示处理后的数据帧(opencv可视化处理)
+            self.running = True  # Ensure program is running
+            capture_thread = threading.Thread(target=self.capture_frames, args=(self.video_capture,)) #Thread 1: Get latest data frame, discard oldest frame in queue
+            process_thread = threading.Thread(target=self.process_frames) #Thread 2: Process Aruco code based on latest data frame, get pose and center pixel coordinate data
+            display_thread = threading.Thread(target=self.display_processed_frames, args=(self.frame_queue_process,)) # Thread 3: Display processed data frame (OpenCV visualization)
             try:
                 capture_thread.start()
                 process_thread.start()
@@ -222,7 +223,7 @@ class CameraProcessor:
                 print("\nKeyboardInterrupt detected. Stopping threads...")
 
             finally:
-                self.running = False  # 确保所有线程退出
+                self.running = False  # Ensure all threads exit
                 self.stop_IMX219_video_capture()
                 cv2.destroyAllWindows()
                 print("Camera released and program exited.")
@@ -230,7 +231,7 @@ class CameraProcessor:
             print("Error: Unable to open camera")
 
     def stop_aruco_realtime(self):
-        self.running = False  # 确保所有线程退出
+        self.running = False  # Ensure all threads exit
         self.stop_IMX219_video_capture()
         cv2.destroyAllWindows()
         print("Camera released and program exited.")
@@ -271,9 +272,9 @@ if __name__ == "__main__":
 
     # while True:
     #     z, ry, perc = camera_processor.get_aruco_realtime_date()
-    #     print(f"实时获取的 z: {z}, ry: {ry}, 百分比:{perc}")
+    #     print(f"Real-time data - z: {z}, ry: {ry}, perc:{perc}")
     #     keyCode = cv2.waitKey(1) & 0xFF
-    #     if keyCode == 27 or keyCode == ord('q'):  # ESC键或 'q' 键退出
+    #     if keyCode == 27 or keyCode == ord('q'):  # Press ESC or 'q' to exit
     #         break
     
     # camera_processor.stop_aruco_realtime()

@@ -102,7 +102,7 @@ class MapNavigation:
         twist.angular.z = theta
         self.pub.publish(twist)
 
-    # 吸泵控制函数
+    # Suction Pump Control Function
     def pump_on(self):
         GPIO.output(26, GPIO.LOW)
         GPIO.output(19, GPIO.HIGH)
@@ -115,18 +115,18 @@ class MapNavigation:
 
 def pick(angle_watch,box_height,pick_times=1):
     global scanner 
-    for i in range(pick_times): #i=1,快递盒子一次只吸取一个，先识别一层
-        mc.send_angles(angle_watch, 80) # 相机拍照位
+    for i in range(pick_times): #i=1,the delivery box picks up only one at a time, first recognizing one layer
+        mc.send_angles(angle_watch, 80) # Camera shooting position
         wait()
 
         while True :
-            qr_texts,tvecs =scanner.start_capture() # 获取QR码城市信息和tvec位移矩阵
+            qr_texts,tvecs =scanner.start_capture() # Get QR code city information and tvec displacement matrix
             time.sleep(1)
             print("qr_texts",qr_texts)
             print("tvecs",tvecs)
 
             if qr_texts is not None : 
-                curr_coords = mc.get_coords() # 获取当前位姿
+                curr_coords = mc.get_coords() # Get current pose
                 print("curr_coords",curr_coords)
                 time.sleep(2)
                 
@@ -137,18 +137,17 @@ def pick(angle_watch,box_height,pick_times=1):
                     if curr_coords is not None:
                         break
 
-                mat = homo_transform_matrix(*curr_coords) @ homo_transform_matrix(-10, -35, 10, 0, 0, 0)  #矩阵乘积，mat表达了描述机械臂从当前位姿到固定位姿的变换过程的齐次变换矩阵。(-10, -45, 10, 0, 0, 0)为手眼矩阵
-                p_end = np.vstack([np.reshape(tvecs[0], (3, 1)), 1]) # 将列表第一个二维码的tvec位移矩阵转为齐次坐标
-                p_base = np.squeeze((mat @ p_end)[:-1]).astype(int) #将转换矩阵与齐次坐标形式的二维码位移向量相乘，得到[x,y,z,1]并去除最后一个元素(齐次坐标)，最后转为整数类型。
+                mat = homo_transform_matrix(*curr_coords) @ homo_transform_matrix(-10, -35, 10, 0, 0, 0)  
+                p_base = np.squeeze((mat @ p_end)[:-1]).astype(int) 
 
                 # X error compensation
                 p_base[0] -=10
                 # Y error compensation
                 p_base[1] +=40
-                # Z轴固定高度
+                # Z-axis fixed height
                 p_base[2] = box_height
 
-                new_coords = np.concatenate([p_base, curr_coords[3:]]) # 将x,y,z和当前姿态进行连接成一个新数组
+                new_coords = np.concatenate([p_base, curr_coords[3:]]) #Concatenate x, y, z, and the current posture into a new array
                 print("move_coords",list(new_coords))
                 mc.send_coords(list(new_coords),20,1)
                 wait()
@@ -157,7 +156,7 @@ def pick(angle_watch,box_height,pick_times=1):
                 time.sleep(2)
                 print("pump_on")
 
-                curr_coords = mc.get_coords() # 获取当前位姿
+                curr_coords = mc.get_coords() # Get current pose
                 print("curr_coords",curr_coords)
                 time.sleep(2)
                 
@@ -168,8 +167,8 @@ def pick(angle_watch,box_height,pick_times=1):
                     if curr_coords is not None:
                         break
                 
-                curr_coords[2]+=40  # z轴抬高
-                mc.send_coords(curr_coords,40,mode=1) #z轴抬高
+                curr_coords[2]+=40  # Z-axis lift
+                mc.send_coords(curr_coords,40,mode=1) #Z-axis lift
                 wait()
 
                 mc.send_angles(angle_table["pick_point2"], 50)
@@ -178,7 +177,7 @@ def pick(angle_watch,box_height,pick_times=1):
                 mc.send_angles(angle_table["place_init"], 80)
                 wait()
 
-                coords_s = mc.get_coords() #获取当前位姿
+                coords_s = mc.get_coords() # Get current pose
                 print(coords_s)
                 time.sleep(2)
                 
@@ -191,17 +190,17 @@ def pick(angle_watch,box_height,pick_times=1):
 
                 hight= 45
                 coords_s[2]-=hight
-                mc.send_coords(coords_s,40,mode=1) #z轴下降
+                mc.send_coords(coords_s,40,mode=1) #Z-axis descent
                 wait()
                 map_navigation.pump_off()
                 time.sleep(2)
                 print("pump_off")
 
                 coords_s[2]+=hight        
-                mc.send_coords(coords_s,40,mode=1) #z轴抬高
+                mc.send_coords(coords_s,40,mode=1) #Z-axis lift
                 wait()
 
-                mc.send_angles(angle_table["place_point4"], 50) # 过渡点，防止撞掉盒子
+                mc.send_angles(angle_table["place_point4"], 50) # Transition point, prevent crashing into the box
                 wait()
 
                 scanner = None
@@ -211,7 +210,7 @@ def pick(angle_watch,box_height,pick_times=1):
             else:
                 print("qr scanner failed")
 
-    # 结束后复位
+    # Reset after completion
     mc.send_angles(angle_table["move_init"], 50)
     time.sleep(1)
     return qr_texts
@@ -223,7 +222,7 @@ def load():
     mc.send_angles(angle_table["place_init"], 50)
     wait()
 
-    coords_s = mc.get_coords() #获取当前位姿
+    coords_s = mc.get_coords() # Get current pose
     print(coords_s)
     wait()
     
@@ -235,7 +234,7 @@ def load():
             break
 
     coords_s[2]-=70
-    mc.send_coords(coords_s,40,mode=1) #z轴下降
+    mc.send_coords(coords_s,40,mode=1) #Z-axis descent
     wait()
     map_navigation.pump_on()
     wait()
@@ -253,7 +252,7 @@ def load():
             break
 
     coords_s[2]+=70
-    mc.send_coords(coords_s,40,mode=1) #z轴抬高
+    mc.send_coords(coords_s,40,mode=1) #Z-axis lift
     wait()
 
     mc.send_angles(angle_table["place_point4"], 50)
@@ -268,36 +267,36 @@ def load():
     map_navigation.pump_off()
     time.sleep(2)
 
-    # 结束后复位
+    # Reset after completion
     mc.send_angles(angle_table["move_init"], 50)
     wait()
 
 def ocr_recognized():
         
-    # 目标点列表，按照你给定的顺序组织
+    # List of target points, organized according to the order you provided
     goals_sequence = [
-        (box_goals_0[0], box_goals_2[0], box_goals_2[1]),  # box_goals_0 1号点 -> box_goals_2 1号、2号点
-        (box_goals_0[1], box_goals_2[2], box_goals_2[3]),  # box_goals_0 2号点 -> box_goals_2 3号、4号点
-        (box_goals_0[2], box_goals_2[4])                   # box_goals_0 3号点 -> box_goals_2 5号点
+        (box_goals_0[0], box_goals_2[0], box_goals_2[1]),  # box_goals_0 1 point -> box_goals_2 1 point, 2 point
+        (box_goals_0[1], box_goals_2[2], box_goals_2[3]),  # box_goals_0 2 point -> box_goals_2 3 point, 4 point
+        (box_goals_0[2], box_goals_2[4])                   # box_goals_0 3 point -> box_goals_2 5 point
     ]
 
-    # 遍历目标点顺序进行导航
+    # Navigate by traversing the sequence of target points
     for goal_set in goals_sequence:
         for i, goal in enumerate(goal_set):
             
-            # 目标坐标
+            # Navigate to the target point
             x_goal, y_goal, orientation_z, orientation_w = goal
-            print(f"导航到目标点: x={x_goal}, y={y_goal}, 方向z={orientation_z}, 方向w={orientation_w}")
+            print(f"Navigate to the target point: x={x_goal}, y={y_goal}, Direction_z={orientation_z}, Direction_w={orientation_w}")
             
-            # 执行导航
+            # Execute navigation
             flag_feed_goalReached = map_navigation.moveToGoal(x_goal, y_goal, orientation_z, orientation_w)
             
-            # 根据是否到达目标执行OCR识别
+            # Perform OCR recognition based on whether the target is reached
             if flag_feed_goalReached:
                 if i > 0:                    
-                    recognized_ocr_texts.append(ocr_capture.start_capture())  # 识别文字，存储盒子的变量
+                    recognized_ocr_texts.append(ocr_capture.start_capture())  # Recognize text and store box variables
             else:
-                recognized_ocr_texts.append(None)  # 如果目标未到达，追加None
+                recognized_ocr_texts.append(None)  # If the target is not reached, append None
 
 def signal_handler(signal, frame):
     print("Ctrl+C pressed. Exiting...")
@@ -316,30 +315,31 @@ def wait():
 if __name__ == '__main__':
 
     box_goals_0 = [
-        [-0.7349843764305115,0.24553439617156982,0.8816407909804326,0.471921090521919],#中间一号点,姿态朝前
-        [-1.1358978748321533,1.0654418468475342,0.8887916047179362,0.45831155711253446],#中间二号点,姿态朝前      
-        [-1.7721543312072754,1.5437819957733154,0.8958855713120555,0.4442848670784004] #中间三号点,姿态朝前
+        [-0.7349843764305115,0.24553439617156982,0.8816407909804326,0.471921090521919],#Point number one in the middle, facing forward
+        [-1.1358978748321533,1.0654418468475342,0.8887916047179362,0.45831155711253446],#Point number two in the middle, facing forward      
+        [-1.7721543312072754,1.5437819957733154,0.8958855713120555,0.4442848670784004] #Point number three in the middle, facing forward
     ]
 
     box_goals_1 = [
-        [-0.7391788959503174,0.2486436188220978,-0.468811666883722,0.8832981495473123],#中间一号点,姿态朝后
-        [-0.7391788959503174,0.2486436188220978,-0.468811666883722,0.8832981495473123],#中间一号点,姿态朝后
-        [-1.1358978748321533,1.0654418468475342,-0.49958137465689806,0.8662669623712566],#中间二号点,姿态朝后
-        [-1.1358978748321533,1.0654418468475342,-0.49958137465689806,0.8662669623712566],#中间二号点,姿态朝后
-        [-1.7721543312072754,1.5437819957733154,-0.4625007280446197,0.8866189015344736] #中间三号点,姿态朝后
+        [-0.7391788959503174,0.2486436188220978,-0.468811666883722,0.8832981495473123],#Point number one in the middle, facing backward
+        [-0.7391788959503174,0.2486436188220978,-0.468811666883722,0.8832981495473123],#Point number one in the middle, facing backward
+        [-0.7391788959503174,0.2486436188220978,-0.468811666883722,0.8832981495473123],#Point number two in the middle, facing backward
+        [-1.1358978748321533,1.0654418468475342,-0.49958137465689806,0.8662669623712566],#Point number two in the middle, facing backward
+        [-1.1358978748321533,1.0654418468475342,-0.49958137465689806,0.8662669623712566],#Point number two in the middle, facing backward
+        [-1.7721543312072754,1.5437819957733154,-0.4625007280446197,0.8866189015344736] #Point number three in the middle, facing backward
     ]
 
     box_goals_2 = [
-        [-0.7391788959503174,0.2486436188220978,0.2948542038624959,0.9555422536259784],#1号盒子姿态
-        [-0.7391788959503174,0.2486436188220978,-0.953971689949811,0.29989667349655913],#2号盒子姿态
-        [-1.1358978748321533,1.0654418468475342,0.29911497291546424,0.9542170785401931],#3号盒子姿态
-        [-1.1358978748321533,1.0654418468475342,-0.952682813485717,0.30396621011049635],#4号盒子姿态
-        [-1.7721543312072754,1.5437819957733154,-0.9580734245756398,0.28652279686249366]#5号盒子姿态
+        [-0.7391788959503174,0.2486436188220978,0.2948542038624959,0.9555422536259784],#Box 1 posture
+        [-0.7391788959503174,0.2486436188220978,-0.953971689949811,0.29989667349655913],#Box 2 posture
+        [-1.1358978748321533,1.0654418468475342,0.29911497291546424,0.9542170785401931],#3Box 3 posture
+        [-1.1358978748321533,1.0654418468475342,-0.952682813485717,0.30396621011049635],#Box 4 posture
+        [-1.7721543312072754,1.5437819957733154,-0.9580734245756398,0.28652279686249366]#Box 5 posture
     ]
 
-    goal_1 = [-0.7349843764305115,0.24553439617156982,0.8816407909804326,0.471921090521919]#中间一号点,姿态朝前
-    goal_1_back = [-0.7391788959503174,0.2486436188220978,-0.468811666883722,0.8832981495473123]#中间一号点,姿态朝后
-    pack_goal = [-1.6927944374084473,1.6765453577041626,0.29911497291546424,0.9542170785401931]#快递分拣盒附近
+    goal_1 = [-0.7349843764305115,0.24553439617156982,0.8816407909804326,0.471921090521919]#Point number one in the middle, facing forward
+    goal_1_back = [-0.7391788959503174,0.2486436188220978,-0.468811666883722,0.8832981495473123]#Point number one in the middle, facing backward
+    pack_goal = [-1.6927944374084473,1.6765453577041626,0.29911497291546424,0.9542170785401931]#Near the courier sorting box
     charge_goal =[-0.5688837170600891,-0.31650811433792114,0.4588518939959322,0.8885127682686084]
 
     pack_pose = [-1.5043163299560547,2.357182264328003,0.2875093576208822,0.9577778287684612,0.06853892326654787]
@@ -348,32 +348,32 @@ if __name__ == '__main__':
     "zero_position":[0,0,0,0,0,0],
     "move_init":[90.06, -30.41, 22.14, -1.05, 87.45, 0.39],
     "pick_init":[5.44, 6.5, -13.09, -2.54, 81.82, -4.3],
-    "pick_watch":[94.13, 15.2, -21.88, 0.96, 90.79, 4.57],    #相机拍照位2,中心点快递盒子
-    "pick_point2":[-57.91, 0.61, -8.34, 6.32, 19.24, -2.19],    #抓取过渡点
+    "pick_watch":[94.13, 15.2, -21.88, 0.96, 90.79, 4.57],    #Camera photo position 2, center point of the delivery box
+    "pick_point2":[-57.91, 0.61, -8.34, 6.32, 19.24, -2.19],    #Pick transition point
     "place_init":[-93.6, 1.93, 6.24, -0.17, 68.81, -6.24],
     "place_point2":[-7.11, -5.62, -14.85, 0.87, 77.95, -10.37],
-    "place_point3":[90.0, 22.5, -12.48, 2.54, 50.27, -0.35],    #放盒子点位
+    "place_point3":[90.0, 22.5, -12.48, 2.54, 50.27, -0.35],    #Place box position
     "place_point4":[-95.36, 7.03, -22.85, -3.07, 87.89, 1.46]
     }
 
     city_to_region_mapping = {
-        '北京市': '华北区',
-        '上海市': '华东区',
-        '南京市': '华东区',
-        '东莞市': '华南区',
-        '广州市': '华南区',
-        '武汉市': '华中区',
-        '大连市': '东北区',
+        'Beijing': 'North China',
+        'Shanghai': 'East China',
+        'Nanjing': 'East China',
+        'Dongguan': 'South China',
+        'Guangzhou': 'South China',
+        'Wuhan': 'North East',
+        'Dalian': 'North East',
     }
 
-    initialized = True # 导航初始动作
-    USB_CAN_Enable = False # 是否开启充电装置通信
-    box_2_height = 101  #快递盒子第二层Z轴高度101,demo2 140
-    box_1_height = 60   #快递盒子第一层Z轴高度60,demo2 90
+    initialized = True # Navigation initial action
+    USB_CAN_Enable = False # Whether to enable communication for the charging device
+    box_2_height = 101  #Height of the second layer of the delivery box Z-axis 101, demo2 140
+    box_1_height = 60   #Height of the first layer of the delivery box Z-axis 60, demo2 90
 
     boxes_with_text = []
-    recognized_ocr_texts = ['华东区','华南区','华北区','华中区','东北区'] #固定快递分拣点
-    recognized_ocr = [] # ocr识别添加快递分拣点
+    recognized_ocr_texts = ['East China','South China','North China','North East','North East'] #Fixed delivery points
+    recognized_ocr = [] # OCR recognition adds express delivery sorting points
     recognized_qr_texts = []
 
     map_navigation = MapNavigation()
@@ -383,8 +383,8 @@ if __name__ == '__main__':
 
     plist = get_port_list()
     print(plist)
-    mc = MechArm270('/dev/ttyACM0',115200) # 连接机械臂
-    # mc = MechArm270('/dev/ttyACM0',115200,debug=1) # 连接机械臂并打开debug模式
+    mc = MechArm270('/dev/ttyACM0',115200) # Connect to the mechatronic arm
+    # mc = MechArm270('/dev/ttyACM0',115200,debug=1) # Connect to the mechatronic arm and enable debug mode
     mc.set_fresh_mode(0)
 
     mc.send_angles(angle_table["move_init"], 50)
@@ -396,7 +396,7 @@ if __name__ == '__main__':
     signal.signal(signal.SIGINT, signal_handler)
 
     for i in range(5):
-        # 根据循环次数抓取,固定相机拍照位和吸取高度
+        # Capture based on the number of cycles, fixed camera shooting position, and aspiration height
         if i == 0:
             angle_pick = angle_table["pick_watch"]
             box_height = box_2_height
@@ -413,16 +413,16 @@ if __name__ == '__main__':
             angle_pick = angle_table["pick_watch"]
             box_height = box_1_height
 
-        recognized_qr_texts.append(pick(angle_pick,box_height))  # 发送拍照相机关节角度和Z轴高度，抓取并返回识别文字
+        recognized_qr_texts.append(pick(angle_pick,box_height))  # Send the camera joint angles and Z-axis height, grab and return the recognized text
 
-        load()  #导航完所有点进行放盒子
+        load()  # Navigate to all points and perform box placement
 
     exit()
 
     ##########################################################
-    # # 功能一：记录五个导航点的信息
+    # # Function 1: Record information for five navigation points
     ##########################################################
-    # ocr_recognized() # 视觉识别误差较大,该功能暂不使用
+    # ocr_recognized() # Visual recognition of express delivery points, error rate is about 10%, not used for the time being
 
     for text, box_goals_1, box_goals_2 in zip(recognized_ocr_texts, box_goals_1, box_goals_2):
         box_info = {
@@ -436,7 +436,7 @@ if __name__ == '__main__':
         print(box)
         
     ##########################################################
-    # # 功能二：循环5次,每次只抓一个盒子,然后对盒子进行分拣
+    # # Function 2: Loop 5 times, each time only grabbing one box and then sorting it
     ##########################################################
     for i in range(5):
         if (initialized):
@@ -451,7 +451,7 @@ if __name__ == '__main__':
             flag_feed_goalReached = map_navigation.moveToGoal(x_goal, y_goal, orientation_z, orientation_w)
             if not flag_feed_goalReached:
                 print("Navigation failed, retrying...")
-                time.sleep(2)  # 加一个小延时防止频繁调用
+                time.sleep(2)  # Add a small delay to prevent frequent calls
 
         print("python agv_aruco")
         os.system('python agv_aruco.py') 
@@ -459,7 +459,7 @@ if __name__ == '__main__':
         xGoal, yGoal, orientation_z, orientation_w,covariance = pack_pose
         map_navigation.set_pose(xGoal, yGoal, orientation_z, orientation_w,covariance) #amcl重定位
 
-        # 根据循环次数抓取,固定相机拍照位和吸取高度
+        # Capture based on the number of cycles, fixed camera shooting position, and suction height
         if i == 0:
             angle_pick = angle_table["pick_watch"]
             box_height = box_2_height
@@ -476,86 +476,87 @@ if __name__ == '__main__':
             angle_pick = angle_table["pick_watch"]
             box_height = box_1_height
     
-        recognized_qr_texts.append(pick(angle_pick,box_height))  # 发送拍照相机关节角度和Z轴高度，抓取并返回识别文字
+        recognized_qr_texts.append(pick(angle_pick,box_height))  # Send the camera joint angles and Z-axis height, grab and return the recognized text
 
-        # x平移1秒
+        # x shifts 1 second
         map_navigation.pub_vel(-0.1,0,0)
         time.sleep(2.5)
         map_navigation.pub_vel(0,0,0)
 
-        # 旋转180°
+        # Rotate 180°
         map_navigation.pub_vel(0,0,-0.1)
         time.sleep(4)
         map_navigation.pub_vel(0,0,0)
 
-        # x平移1秒
+        # x shifts 1 second
         map_navigation.pub_vel(0.1,0,0)
         time.sleep(2)
 
     ##########################################################
-    # # 功能三：遍历识别到的所有市级名称，依次导航
+    # # Function 3: Traverse all recognized city names in order, navigate to each city
     ##########################################################
-        if recognized_qr_texts: #recognized_qr_texts = ['上海市', '南京市','武汉市','北京市','大连市']  # 通过 OCR 获取的市级列表
+        if recognized_qr_texts: #recognized_qr_texts = ['Shanghai', 'Nanjing', 'Wuhan', 'Beijing', 'Dalian'] # List of cities obtained through OCR
             print("recognized_ocr_texts:",recognized_ocr_texts) #debug
             print("recognized_qr_texts:",recognized_qr_texts)   #debug 
-            # 获取列表中的最后一个城市
+            # Get the last city in the list
             last_city = recognized_qr_texts[-1]
-            region = city_to_region_mapping.get(last_city, "未知区域") # 上海市：华东区，返回华东区
-            if region != "未知区域":
-                # 查找与该区域对应的目标位置
+            region = city_to_region_mapping.get(last_city, "Unknown area") # Map the last city to the corresponding region, default to "Unknown area" if not found
+            print(f"City: {last_city}, Corresponding region: {region}")
+            if region != "Unknown area":
+                # Find the target location corresponding to this area
                 for box in boxes_with_text:
                     if box["text"] == region:
 
-                        # 获取该区域的两个个目标点
+                        # Get the two target points for this area
                         box_goals_1 = box["box_goals_1"]
                         box_goals_2 = box["box_goals_2"]
 
-                        # 遍历目标点和方向信息，依次导航到每个目标
+                        # Traverse the target points and direction information, navigate to each target in order
                         for target_num, goal in enumerate([box_goals_1, box_goals_2], 1):
-                            # 目标坐标
+                            # Target coordinates
                             x_goal, y_goal, orientation_z, orientation_w = goal
 
-                            print(f"导航到{region}的目标{target_num}: x={x_goal}, y={y_goal}, 方向z={orientation_z}, 方向w={orientation_w}")
+                            print(f"Navigate to {region} target {target_num}: x={x_goal}, y={y_goal}, Direction z={orientation_z}, Direction w={orientation_w}")
                             map_navigation.moveToGoal(x_goal, y_goal, orientation_z, orientation_w)
 
                         recognized_ocr.append(ocr_capture.start_capture())
 
-                        print(f"识别到{recognized_ocr[-1]},{region}快递即将搬运至{recognized_ocr[-1]}")
+                        print(f"Recognized {recognized_ocr[-1]},{region} express will be transported to {recognized_ocr[-1]}")
 
                         print("python agv_aruco")
-                        os.system('python agv_aruco.py')    # 导航目标点
+                        os.system('python agv_aruco.py')    # Navigate to the target point
                         
-                        load()  #导航完所有点进行放盒子
+                        load()  # Navigate to all points and put the box
                         map_navigation.pub_vel(-0.1,0,0)
                         time.sleep(5.7)
                         map_navigation.pub_vel(0,0,0)
       
     ##########################################################
-    # # 功能四：回充套装
+    # # Function 4: Return to the charging station
     ##########################################################
 
-    x_goal, y_goal, orientation_z, orientation_w = goal_1_back #先导航到该点，避免撞到快递放置盒
+    x_goal, y_goal, orientation_z, orientation_w = goal_1_back # Navigate to this point first to avoid hitting the express placement box
     flag_feed_goalReached = map_navigation.moveToGoal(x_goal, y_goal, orientation_z, orientation_w)
     if flag_feed_goalReached:
 
-        # x平移1秒
+        # x translate 1 second
         map_navigation.pub_vel(0.1,0,0)
         time.sleep(5.5)
         map_navigation.pub_vel(0,0,0)
 
-        # 旋转
+        # Rotate 180°  
         map_navigation.pub_vel(0,0,0.1)
         time.sleep(4.2)
         map_navigation.pub_vel(0,0,0)
 
         if USB_CAN_Enable:
-            parser.open_serial() # 打开usb串口
+            parser.open_serial() # Open the USB serial port
             try:
-                # 发送AT 命令从透传模式进入AT指令模式
+                # Send AT commands to enter AT command mode from transparent transmission mode
                 parser.send_at_commands(["AT+CG", "AT+AT"])
                 
                 while True:
-                    # 开始读取数据
+                    # Start reading data
                     x_speed,z_speed,which_mode,infrared_bits = parser.read_serial_data()
                     if infrared_bits[7] == 0 :
                         if(which_mode) == 0x01:
@@ -580,13 +581,13 @@ if __name__ == '__main__':
                         map_navigation.pub_vel(0,0,0)
                         break 
             except KeyboardInterrupt:
-                print("手动中止程序。")
+                print("Manually terminate the program.")
         else:
-            # x平移1秒
+            # x translate 1 second
             map_navigation.pub_vel(-0.1,0,0)
             time.sleep(7.5)
             map_navigation.pub_vel(0,0,0)
 
-        sys.exit()  #结束程序 
+        sys.exit()  # End the program 
 
         

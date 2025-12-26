@@ -95,12 +95,12 @@ def signal_handler(signal, frame):
 
 
 if __name__ == '__main__':
-    initialized = True # 导航初始动作
+    initialized = True # Navigation initial action
     map_navigation = MapNavigation()
     
-    goal_1 = [-0.7349843764305115,0.24553439617156982,0.8816407909804326,0.471921090521919]#中间一号点,姿态朝前
-    goal_1_back = [-0.7391788959503174,0.2486436188220978,-0.468811666883722,0.8832981495473123]#中间一号点,姿态朝后
-    pack_goal = [-1.6927944374084473,1.6765453577041626,0.29911497291546424,0.9542170785401931]#快递分拣盒附近
+    goal_1 = [-0.7349843764305115,0.24553439617156982,0.8816407909804326,0.471921090521919]# Middle point 1, facing forward
+    goal_1_back = [-0.7391788959503174,0.2486436188220978,-0.468811666883722,0.8832981495473123]# Middle point 1, facing backward
+    pack_goal = [-1.6927944374084473,1.6765453577041626,0.29911497291546424,0.9542170785401931]#Near the courier sorting box
     
     # Register the Ctrl+C signal handler
     global running_flag 
@@ -111,12 +111,12 @@ if __name__ == '__main__':
         initialized = False
         x_goal, y_goal, orientation_z, orientation_w = goal_1
         map_navigation.moveToGoal(x_goal, y_goal, orientation_z, orientation_w)
-        print(f"导航到目标点: x={x_goal}, y={y_goal}, 方向z={orientation_z}, 方向w={orientation_w}")
+        print(f"Navigate to the target point: x={x_goal}, y={y_goal}, Direction z={orientation_z}, Direction w={orientation_w}")
     
     # x_goal, y_goal, orientation_z, orientation_w = goal_1
     # map_navigation.moveToGoal(x_goal, y_goal, orientation_z, orientation_w)
             
     x_goal, y_goal, orientation_z, orientation_w = pack_goal
     flag_feed_goalReached = map_navigation.moveToGoal(x_goal, y_goal, orientation_z, orientation_w)
-    print(f"导航到目标点: x={x_goal}, y={y_goal}, 方向z={orientation_z}, 方向w={orientation_w}")
+    print(f"Navigate to the target point: x={x_goal}, y={y_goal}, Direction z={orientation_z}, Direction w={orientation_w}")
     

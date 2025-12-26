@@ -79,11 +79,11 @@ class OCRVideoCapture:
             try:
                 window_handle = cv2.namedWindow(window_title, cv2.WINDOW_AUTOSIZE)
                 while True:
-                    # 获取视频流
+                    # Get video stream
                     ret, frame = video_capture.read()
                     flipped_frame = cv2.flip(frame,-1)
                     if not ret:
-                        print("无法读取视频流")
+                        print("Failed to capture video stream")
                         break
 
                     result = self.process_frame(flipped_frame)
@@ -96,12 +96,12 @@ class OCRVideoCapture:
                     else:
                         cv2.imshow("Char Scanner",flipped_frame)
                     
-                        # 按 'q' 键退出
+                        # Press 'q' to quit
                         if cv2.waitKey(1) & 0xFF == ord('q'):
                             cv2.destroyAllWindows()
                             break
                     if time.time()-self.start_time>self.time_out:
-                        print("识别超时")
+                        print("Timeout, failed to recognize characters")
                         cv2.destroyAllWindows()
                         return -1
             finally:
@@ -112,7 +112,7 @@ class OCRVideoCapture:
         self.cap.release()
         cv2.destroyAllWindows()
 
-#使用案例
+#Use Case
 if __name__ == "__main__":
     ocr_capture = OCRVideoCapture()  
     for i in range(5):

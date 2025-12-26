@@ -27,25 +27,25 @@ class QRCodeScanner:
                                         [self.marker_size/2, -self.marker_size/2, 0], [-self.marker_size/2, -self.marker_size/2, 0]], dtype=np.float32)
        
         if not self.cap.isOpened():
-            raise Exception("无法打开摄像头")
+            raise Exception("Failed to open camera")
 
     def scan_qrcode_from_camera(self,raw_frame):
 
         decoded_objects = decode(raw_frame)
-        city = "未知城市"  # 给city一个默认值，防止未赋值时引用
+        city = "Unknown City"  # Give the city a default value to prevent referencing it when it is not assigned
         if decoded_objects:
             
             for obj in decoded_objects:
                 qr_data = obj.data.decode("utf-8")
                 # print(f"{i} QR Code Data: {qr_data}")
-                match = re.search(r'地址：(.+?市)',  qr_data)
+                match = re.search(r'(.+?City)',  qr_data)
                 if match:
                     city = match.group(1)
-                    if "省" in city:
-                        parts =city.split("省")
+                    if "Province" in city:
+                        parts =city.split("Province")
                         city=parts[-1]
                 else:
-                    print("未找到城市信息")
+                    print("City information not found")
                 points = obj.polygon
                 if len(points) == 4:  # 
 
@@ -79,7 +79,7 @@ class QRCodeScanner:
             self.start_time=time.time()
             ret, frame = self.cap.read()
             if not ret:
-                print("无法读取视频流")
+                print("Failed to read video stream")
                 break
             result=self.scan_qrcode_from_camera(frame)
             
@@ -91,22 +91,22 @@ class QRCodeScanner:
             else:
                 cv2.imshow("QR Code Scanner",frame)
             
-                # 按 'q' 键退出
+                # Press 'q' to quit
                 if cv2.waitKey(1) & 0xFF == ord('q'):
                     cv2.destroyAllWindows()
                     break
             # print(time.time()-self.start_time)
             if time.time()-self.start_time>self.time_out:
-                print("60s识别超时")
+                print("60s recognition timeout")
                 cv2.destroyAllWindows()
                 return -1
 
     def release_resources(self):
-        # 释放摄像头和窗口
+        # Release camera and window
         self.cap.release()
         cv2.destroyAllWindows()
 
-# 使用示例
+# Usage Example
 if __name__ == "__main__":
     scanner = QRCodeScanner()
     for i in range(1):
