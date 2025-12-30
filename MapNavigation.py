@@ -1,19 +1,15 @@
-import rospy
-import time
-import actionlib
-import signal
 import sys
-import os
-import numpy as np
-
-from actionlib_msgs.msg import *
-from actionlib_msgs.msg import GoalID
-from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
+import rospy
+import actionlib
+import time
+import Jetson.GPIO as GPIO
 from geometry_msgs.msg import Point
 from geometry_msgs.msg import Twist
 from geometry_msgs.msg import PoseWithCovarianceStamped
+from actionlib_msgs.msg import GoalID
+from actionlib_msgs.msg import GoalStatus
+from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 from tf.transformations import quaternion_from_euler
-
 class MapNavigation:
     def __init__(self):
         self.goalReached = False
@@ -24,6 +20,11 @@ class MapNavigation:
         self.pub_setpose = rospy.Publisher('/initialpose',PoseWithCovarianceStamped, queue_size=10)
         self.pub_cancel = rospy.Publisher('/move_base/cancel', GoalID, queue_size=10)
 
+        GPIO.setwarnings(False)
+        GPIO.setmode(GPIO.BCM)
+        GPIO.setup(19, GPIO.OUT)
+        GPIO.setup(26, GPIO.OUT)
+        self.pump_off()
 
     # init robot  pose AMCL
     def set_pose(self, xGoal, yGoal, orientation_z, orientation_w,covariance):
@@ -45,7 +46,7 @@ class MapNavigation:
          0.0,0.0, 0.0, 0.0, covariance]
         rospy.sleep(1)
         self.pub_setpose.publish(pose)
-        rospy.loginfo('Published robot pose: %s' % pose)
+        # rospy.loginfo('Published robot pose: %s' % pose)
     
     # move_base
     def moveToGoal(self, xGoal, yGoal, orientation_z, orientation_w):
@@ -65,6 +66,7 @@ class MapNavigation:
 
         rospy.loginfo("Sending goal location ...")
         ac.send_goal(goal) 
+
         ac.wait_for_result(rospy.Duration(60))
 
         if(ac.get_state() ==  GoalStatus.SUCCEEDED):
@@ -73,7 +75,7 @@ class MapNavigation:
         else:
             rospy.loginfo("The robot failed to reach the destination")
             return False
-            
+        
     # speed command
     def pub_vel(self, x, y , theta):
         twist = Twist()
@@ -84,38 +86,14 @@ class MapNavigation:
         twist.angular.y = 0
         twist.angular.z = theta
         self.pub.publish(twist)
-            
-def signal_handler(signal, frame):
-    print("Ctrl+C pressed. Exiting...")
-    # Close all connections
-    running_flag = False
-    print("Connections closed.")
-    sys.exit()
 
+    # Suction pump control function
+    def pump_on(self):
+        GPIO.output(26, GPIO.LOW)
+        GPIO.output(19, GPIO.HIGH)
 
-if __name__ == '__main__':
-    initialized = True # Navigation initial action
-    map_navigation = MapNavigation()
-    
-    goal_1 = [-0.7349843764305115,0.24553439617156982,0.8816407909804326,0.471921090521919]# Middle point 1, facing forward
-    goal_1_back = [-0.7391788959503174,0.2486436188220978,-0.468811666883722,0.8832981495473123]# Middle point 1, facing backward
-    pack_goal = [-1.6927944374084473,1.6765453577041626,0.29911497291546424,0.9542170785401931]#Near the courier sorting box
-    
-    # Register the Ctrl+C signal handler
-    global running_flag 
-    running_flag = True
-    signal.signal(signal.SIGINT, signal_handler)
-    
-    if (initialized):
-        initialized = False
-        x_goal, y_goal, orientation_z, orientation_w = goal_1
-        map_navigation.moveToGoal(x_goal, y_goal, orientation_z, orientation_w)
-        print(f"Navigate to the target point: x={x_goal}, y={y_goal}, Direction z={orientation_z}, Direction w={orientation_w}")
-    
-    # x_goal, y_goal, orientation_z, orientation_w = goal_1
-    # map_navigation.moveToGoal(x_goal, y_goal, orientation_z, orientation_w)
-            
-    x_goal, y_goal, orientation_z, orientation_w = pack_goal
-    flag_feed_goalReached = map_navigation.moveToGoal(x_goal, y_goal, orientation_z, orientation_w)
-    print(f"Navigate to the target point: x={x_goal}, y={y_goal}, Direction z={orientation_z}, Direction w={orientation_w}")
-    
+    def pump_off(self):
+        GPIO.output(26, GPIO.HIGH)
+        GPIO.output(19, GPIO.LOW)
+        time.sleep(0.05)
+        GPIO.output(19, GPIO.HIGH)

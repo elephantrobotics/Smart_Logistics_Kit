@@ -4,6 +4,7 @@ import rospy
 import serial
 import time
 
+
 class SerialCANParser:
     def __init__(self, serial_port='/dev/ttyUSB0', baudrate=9600, timeout=1):
         self.serial_port = serial_port  # Serial Port Name

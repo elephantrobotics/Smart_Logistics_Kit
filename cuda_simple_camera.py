@@ -159,7 +159,7 @@ class CameraProcessor:
             ret_val, frame = cap.read()
             if ret_val:
                 if self.frame_queue_capture.full():
-                    self.frame_queue_capture.get()  # 丢弃队列中最旧的帧
+                    self.frame_queue_capture.get()  # Discard the oldest frame in the queue
                 self.frame_queue_capture.put(frame)
 
     def process_frames(self):
@@ -198,7 +198,7 @@ class CameraProcessor:
                 cv2.imshow(window_title, frame)
              
                 keyCode = cv2.waitKey(1) & 0xFF
-                if keyCode == 27 or keyCode == ord('q'):  # ESC键或 'q' 键退出
+                if keyCode == 27 or keyCode == ord('q'):  # Press ESC or 'q' to exit
                     break
    
     def process_aruco_realtime(self):
@@ -215,9 +215,9 @@ class CameraProcessor:
                 display_thread.join()
                 process_thread.join()
                 display_thread.join()
-                # # 用循环检测 Ctrl+C，而不是 join() 阻塞
+                # # Use a loop to check Ctrl+C instead of joining() to avoid blocking.
                 # while self.running:
-                #     time.sleep(0.1)  # 避免 CPU 过载
+                #     time.sleep(0.1)  # Avoid CPU overload
 
             except KeyboardInterrupt:
                 print("\nKeyboardInterrupt detected. Stopping threads...")

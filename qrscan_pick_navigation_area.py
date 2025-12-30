@@ -288,18 +288,18 @@ if __name__ == '__main__':
     }
     
     city_to_region_mapping = {
-        '北京市': '华北区',
-        '上海市': '华东区',
-        '南京市': '华东区',
-        '东莞市': '华南区',
-        '广州市': '华南区',
-        '武汉市': '华中区',
-        '大连市': '东北区',
+        'Beijing': 'North China',
+        'Shanghai': 'East China',
+        'Nanjing': 'East China',
+        'Dongguan': 'South China',
+        'Guangzhou': 'South China',
+        'Wuhan': 'North East',
+        'Dalian': 'North East',
     }
     
     pack_pose = [-1.5043163299560547,2.357182264328003,0.2875093576208822,0.9577778287684612,0.06853892326654787]
     boxes_with_text = []
-    recognized_ocr_texts = ['华东区','华南区','华北区','华中区','东北区'] #Fixed express sorting points
+    recognized_ocr_texts = ['South China','North East','North China','East China'] #Fixed express sorting points
     recognized_ocr = [] # OCR recognition adds express sorting points
     recognized_qr_texts = []
     
@@ -338,7 +338,7 @@ if __name__ == '__main__':
     if (initialized):
         initialized = False
         xGoal, yGoal, orientation_z, orientation_w,covariance = pack_pose
-        map_navigation.set_pose(xGoal, yGoal, orientation_z, orientation_w,covariance) #amcl重定位
+        map_navigation.set_pose(xGoal, yGoal, orientation_z, orientation_w,covariance) #amcl relocation
     
         angle_pick = angle_table["pick_watch"]
         box_height = box_1_height
@@ -363,12 +363,12 @@ if __name__ == '__main__':
     else:
         print("failed.")
     
-    if recognized_qr_texts: #recognized_qr_texts = ['Shanghai', 'Nanjing', 'Wuhan', 'Beijing', 'Dalian'] # List of cities obtained through OCR
+    if recognized_qr_texts: #recognized_qr_texts = ['Shanghai', 'Nanjing', 'Wuhan', 'Beijing', 'Dalian']  # City-level list obtained through OCR
         print("recognized_ocr_texts:",recognized_ocr_texts) #debug
         print("recognized_qr_texts:",recognized_qr_texts)   #debug 
         # Get the last city in the list
         last_city = recognized_qr_texts[-1]
-        region = city_to_region_mapping.get(last_city, "Unknown area") # Get the region of the last city in the list, if not found, return "Unknown area"
+        region = city_to_region_mapping.get(last_city, "Unknown area") # Shanghai: East China Region, Return to East China Region
         if region != "Unknown area":
             # Find the target position corresponding to that region
             for box in boxes_with_text:

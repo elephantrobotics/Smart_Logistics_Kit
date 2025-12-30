@@ -30,7 +30,6 @@ class image_converter:
         upper_yellow = np.array([25,255,250])
 
         mask = cv2.inRange(hsv,lower_yellow,upper_yellow)
-
         h,w,d = cv_image.shape
 
         search_top = int(3*h/4)

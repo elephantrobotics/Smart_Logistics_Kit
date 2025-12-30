@@ -419,9 +419,9 @@ if __name__ == '__main__':
 
     exit()
 
-    ##########################################################
+    ################################################################
     # # Function 1: Record information for five navigation points
-    ##########################################################
+    ################################################################
     # ocr_recognized() # Visual recognition of express delivery points, error rate is about 10%, not used for the time being
 
     for text, box_goals_1, box_goals_2 in zip(recognized_ocr_texts, box_goals_1, box_goals_2):
@@ -435,9 +435,9 @@ if __name__ == '__main__':
     for box in boxes_with_text:
         print(box)
         
-    ##########################################################
+    ##################################################################################
     # # Function 2: Loop 5 times, each time only grabbing one box and then sorting it
-    ##########################################################
+    ##################################################################################
     for i in range(5):
         if (initialized):
             initialized = False
@@ -457,7 +457,7 @@ if __name__ == '__main__':
         os.system('python agv_aruco.py') 
 
         xGoal, yGoal, orientation_z, orientation_w,covariance = pack_pose
-        map_navigation.set_pose(xGoal, yGoal, orientation_z, orientation_w,covariance) #amcl重定位
+        map_navigation.set_pose(xGoal, yGoal, orientation_z, orientation_w,covariance) #amcl relocation
 
         # Capture based on the number of cycles, fixed camera shooting position, and suction height
         if i == 0:
@@ -492,9 +492,9 @@ if __name__ == '__main__':
         map_navigation.pub_vel(0.1,0,0)
         time.sleep(2)
 
-    ##########################################################
+    ########################################################################################
     # # Function 3: Traverse all recognized city names in order, navigate to each city
-    ##########################################################
+    ########################################################################################
         if recognized_qr_texts: #recognized_qr_texts = ['Shanghai', 'Nanjing', 'Wuhan', 'Beijing', 'Dalian'] # List of cities obtained through OCR
             print("recognized_ocr_texts:",recognized_ocr_texts) #debug
             print("recognized_qr_texts:",recognized_qr_texts)   #debug 
@@ -561,7 +561,7 @@ if __name__ == '__main__':
                     if infrared_bits[7] == 0 :
                         if(which_mode) == 0x01:
                             map_navigation.pub_vel(x_speed,0,z_speed)
-                        # elif (which_mode) == 0xBB: # 测压区
+                        # elif (which_mode) == 0xBB: # Pressure testing area
                         #     map_navigation.pub_vel(0,0,0)
                         #     time.sleep(1)
                         #     map_navigation.pub_vel(0,0,0.5)
@@ -571,7 +571,7 @@ if __name__ == '__main__':
                         #     map_navigation.pub_vel(-0.1,0,0)
                         #     time.sleep(1)
                         #     map_navigation.pub_vel(0,0,0)
-                        elif (which_mode) == 0xAA: # 充电区
+                        elif (which_mode) == 0xAA: # Charging area
                             map_navigation.pub_vel(0,0,0)
                             break
                         elif (which_mode) == 0xCF:

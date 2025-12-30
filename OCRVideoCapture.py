@@ -1,6 +1,5 @@
 import cv2
 from paddleocr import PaddleOCR
-
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 import time

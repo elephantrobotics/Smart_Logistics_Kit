@@ -6,7 +6,6 @@ import rospy
 import cv2
 import sys
 from cuda_simple_camera import CameraProcessor  
-
 from std_msgs.msg import Int8
 from geometry_msgs.msg import Twist
 

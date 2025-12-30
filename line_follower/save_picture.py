@@ -36,7 +36,6 @@ class image_converter:
         # Display the captured image
         cv2.imshow("Captured Image", cv_image)
         cv2.waitKey(0)  # Wait for a keyboard event to ensure the window is displayed
-
         cv2.destroyAllWindows()  # Close Window
 
 if __name__ == '__main__':

@@ -9,7 +9,6 @@ import Jetson.GPIO as GPIO
 
 from pymycobot.mecharm270 import MechArm270
 from pymycobot.utils import get_port_list
-
 from OCRVideoCapture import OCRVideoCapture
 from QRCodeScanner import QRCodeScanner
 from Transformation import homo_transform_matrix

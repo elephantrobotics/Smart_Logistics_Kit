@@ -154,7 +154,7 @@ class CameraProcessor:
                     if res:
                         _z = res[0][2]
                         _ry = res[0][4]
-                        _perc = res[0][6][0] / 960.0  # 归一化[0,1]
+                        _perc = res[0][6][0] / 960.0  # Normalized to [0,1]
                         print("Z:", _z)
                         print("ry", _ry)
                         print("perc", _perc)

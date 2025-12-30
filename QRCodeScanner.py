@@ -63,6 +63,7 @@ class QRCodeScanner:
                     pil_image = Image.fromarray(raw_frame)
                     draw = ImageDraw.Draw(pil_image)
                     bbox = draw.textbbox((x, y), qr_data, font=self.font)
+                    
                     text_width = bbox[2] - bbox[0]
                     text_height = bbox[3] - bbox[1]
 

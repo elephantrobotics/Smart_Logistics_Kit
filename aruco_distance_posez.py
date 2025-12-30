@@ -43,7 +43,6 @@ def gstreamer_pipeline(
     )
 
 cap = cv2.VideoCapture(gstreamer_pipeline(flip_method=0), cv2.CAP_GSTREAMER)
-
 font = cv2.FONT_HERSHEY_SIMPLEX #font for displaying text (below)
 distance_values = deque(maxlen=5)
 
