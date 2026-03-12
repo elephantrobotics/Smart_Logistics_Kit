@@ -132,7 +132,7 @@ class SerialCANParser:
 
                             # Clear the buffer, ready for the next frame of data
                             self.buffer.clear()
-                            return self.x_speed, self.z_speed, self.which_mode, self.infrared_bits   # 返回解析后的数据
+                            return self.x_speed, self.z_speed, self.which_mode, self.infrared_bits   # Return the parsed data
                         else:
                             # If it is not a valid data frame, clear the buffer and jump to the next loop.
                             self.buffer.clear()

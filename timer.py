@@ -21,7 +21,7 @@ class TaskTimer:
         self.records.append((step_name, duration))
         self.last_checkpoint = now
         # Print it out in real time so you can easily see the screen.
-        print(f"[Timing] {step_name:<15} 耗时: {duration:.2f}s")
+        print(f"[Timing] {step_name:<15} time-consuming: {duration:.2f}s")
 
     def save_to_txt(self, filename="agv_log.txt", note=""):
         """

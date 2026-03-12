@@ -799,7 +799,7 @@ def process_qr_data():
         
         # 2. The situation of the two express boxes
         elif (total_id3 + total_id4) == 2:
-            print("process_qr_data: 检测到2个快递盒")
+            print("process_qr_data: Detected 2 express boxes")
             
             # 2.1 One ID3 and one ID4
             if total_id3 == 1 and total_id4 == 1:

@@ -120,10 +120,10 @@ def pick(angle_watch, box_height, pick_info=None, pick_times=1):
                     time.sleep(1)
                     
                     while curr_coords is None:
-                        print("获取坐标失败，重试中... (coords is None)")
+                        print("Failed to get coordinates, retrying... (coords is None)")
                         time.sleep(0.5)
                         curr_coords = mc.get_coords()
-                    print("获取成功:", curr_coords)
+                    print("Coordinates obtained successfully:", curr_coords)
                     # Matrix transformation calculation to retrieve coordinates
                     mat = homo_transform_matrix(*curr_coords) @ homo_transform_matrix(-10, -35, 10, 0, 0, 0)  # Hand-eye matrix
                     p_end = np.vstack([np.reshape(tvecs[0], (3, 1)), 1]) # Convert to homogeneous coordinates
