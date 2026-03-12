@@ -414,13 +414,13 @@ if __name__ == '__main__':
     }
 
     city_to_region_mapping = {
-        'Beijing ': 'North China',
-        'Shanghai': 'East China',
-        'Nanjing': 'East China',
-        'Dongguan': 'South China',
-        'Guangzhou': 'South China',
-        'Wuhan': 'North East',
-        'Dalian': 'North East',
+        'Beijing City': 'North China',
+        'Shanghai City': 'East China',
+        'Nanjing City': 'East China',
+        'Dongguan City': 'South China',
+        'Guangzhou City': 'South China',
+        'Wuhan City': 'North East',
+        'Dalian City': 'North East',
     }
 
     # initialized = True # Initial navigation action
