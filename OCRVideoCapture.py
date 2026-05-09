@@ -1,5 +1,6 @@
 import cv2
 from paddleocr import PaddleOCR
+
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 import time
@@ -78,11 +79,10 @@ class OCRVideoCapture:
             try:
                 window_handle = cv2.namedWindow(window_title, cv2.WINDOW_AUTOSIZE)
                 while True:
-                    # Get video stream
                     ret, frame = video_capture.read()
                     flipped_frame = cv2.flip(frame,-1)
                     if not ret:
-                        print("Failed to capture video stream")
+                        print("Failed to read video stream")
                         break
 
                     result = self.process_frame(flipped_frame)
@@ -94,13 +94,12 @@ class OCRVideoCapture:
                         return result[1]
                     else:
                         cv2.imshow("Char Scanner",flipped_frame)
-                    
-                        # Press 'q' to quit
+
                         if cv2.waitKey(1) & 0xFF == ord('q'):
                             cv2.destroyAllWindows()
                             break
                     if time.time()-self.start_time>self.time_out:
-                        print("Timeout, failed to recognize characters")
+                        print("OCR timeout, please check the camera")
                         cv2.destroyAllWindows()
                         return -1
             finally:
@@ -108,10 +107,8 @@ class OCRVideoCapture:
                 cv2.destroyAllWindows()
 
     def release_resources(self):
-        self.cap.release()
         cv2.destroyAllWindows()
 
-#Use Case
 if __name__ == "__main__":
     ocr_capture = OCRVideoCapture()  
     for i in range(5):

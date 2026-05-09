@@ -7,9 +7,7 @@ from matplotlib import pyplot as plt
 from cv_bridge import CvBridge, CvBridgeError
 from sensor_msgs.msg import Image
 
-#Reading image information using OpenCV
 img = cv2.imread('save_image_20241217_141238.jpg')
-# BGR chart converted to HSV
 hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
 
 cv2.imshow("img", img)

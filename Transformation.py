@@ -1,5 +1,6 @@
 import numpy as np
 
+
 def Rx(theta):
     return np.array([[1, 0, 0],
                      [0, np.cos(theta), -np.sin(theta)],

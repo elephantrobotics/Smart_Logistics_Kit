@@ -32,7 +32,7 @@ class QRCodeScanner:
     def scan_qrcode_from_camera(self,raw_frame):
 
         decoded_objects = decode(raw_frame)
-        city = "Unknown City"  # Give the city a default value to prevent referencing it when it is not assigned
+        city = "Unknown City"  
         if decoded_objects:
             
             for obj in decoded_objects:
@@ -45,7 +45,7 @@ class QRCodeScanner:
                         parts =city.split("Province")
                         city=parts[-1]
                 else:
-                    print("City information not found")
+                    print("No city information found")
                 points = obj.polygon
                 if len(points) == 4:  # 
 
@@ -63,7 +63,6 @@ class QRCodeScanner:
                     pil_image = Image.fromarray(raw_frame)
                     draw = ImageDraw.Draw(pil_image)
                     bbox = draw.textbbox((x, y), qr_data, font=self.font)
-                    
                     text_width = bbox[2] - bbox[0]
                     text_height = bbox[3] - bbox[1]
 
@@ -76,8 +75,11 @@ class QRCodeScanner:
                     return [qr_frame,city,tvec]
 
     def start_capture(self):
+        self.start_time=time.time()
+        timeout_seconds=2
+        for _ in range(5):
+            self.cap.grab()
         while True:
-            self.start_time=time.time()
             ret, frame = self.cap.read()
             if not ret:
                 print("Failed to read video stream")
@@ -92,22 +94,24 @@ class QRCodeScanner:
             else:
                 cv2.imshow("QR Code Scanner",frame)
             
-                # Press 'q' to quit
+                # Press 'q' key to exit the loop
                 if cv2.waitKey(1) & 0xFF == ord('q'):
                     cv2.destroyAllWindows()
                     break
-            # print(time.time()-self.start_time)
-            if time.time()-self.start_time>self.time_out:
-                print("60s recognition timeout")
-                cv2.destroyAllWindows()
-                return -1
+                # Check if time is up
+                if time.time() - self.start_time > timeout_seconds:
+                    print("Timeout: No code detected.")
+                    break  # Break the loop to return None
+        
+        cv2.destroyAllWindows()
+        return [None,None]
 
     def release_resources(self):
         # Release camera and window
         self.cap.release()
         cv2.destroyAllWindows()
 
-# Usage Example
+# Usage exampless
 if __name__ == "__main__":
     scanner = QRCodeScanner()
     for i in range(1):

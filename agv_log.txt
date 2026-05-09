@@ -1,0 +1,470 @@
+
+========== Record Time: 2026-04-29 05:25:23  ==========
+Check target type    : 4.21s
+Approach target box  : 25.87s
+Pick target box      : 33.52s
+Approach target box  : 31.45s
+Unload package       : 16.19s
+-----------------------------------
+Total Time           : 111.24s
+==============================================
+
+========== Record Time: 2026-04-29 08:53:36  ==========
+Check target type    : 24.96s
+Approach target box  : 44.57s
+Pick target box      : 34.00s
+Approach target box  : 60.37s
+Unload package       : 16.28s
+-----------------------------------
+Total Time           : 180.18s
+==============================================
+
+========== Record Time: 2026-04-29 08:59:22  ==========
+Check target type    : 199.84s
+Approach target box  : 17.35s
+Pick target box      : 34.27s
+Approach target box  : 50.37s
+Unload package       : 15.30s
+-----------------------------------
+Total Time           : 317.13s
+==============================================
+
+========== Record Time: 2026-04-28 10:43:27  ==========
+Check target type    : 4.26s
+Approach target box  : 21.45s
+Pick target box      : 34.60s
+Approach target box  : 40.54s
+Unload package       : 16.28s
+-----------------------------------
+Total Time           : 117.13s
+==============================================
+
+========== Record Time: 2026-04-28 10:47:07  ==========
+Check target type    : 4.15s
+Approach target box  : 29.00s
+Pick target box      : 34.98s
+Approach target box  : 66.36s
+Unload package       : 16.55s
+-----------------------------------
+Total Time           : 151.03s
+==============================================
+
+========== Record Time: 2026-04-29 10:34:05  ==========
+Check target type    : 4.57s
+Approach target box  : 61.63s
+Pick target box      : 34.70s
+Approach target box  : 43.58s
+Unload package       : 16.18s
+-----------------------------------
+Total Time           : 160.67s
+==============================================
+
+========== Record Time: 2026-04-29 10:38:19  ==========
+Check target type    : 4.18s
+Approach target box  : 26.99s
+Pick target box      : 101.37s
+Approach target box  : 40.19s
+Unload package       : 20.73s
+-----------------------------------
+Total Time           : 193.46s
+==============================================
+
+========== Record Time: 2026-04-29 10:40:28  ==========
+Check target type    : 4.28s
+Approach target box  : 20.76s
+Pick target box      : 34.48s
+Approach target box  : 36.18s
+Unload package       : 16.46s
+-----------------------------------
+Total Time           : 112.16s
+==============================================
+
+========== Record Time: 2026-04-29 11:10:02  ==========
+Check target type    : 4.19s
+Approach target box  : 17.24s
+Pick target box      : 34.69s
+Approach target box  : 89.88s
+Unload package       : 16.50s
+-----------------------------------
+Total Time           : 162.49s
+==============================================
+
+========== Record Time: 2026-04-29 11:13:57  ==========
+Check target type    : 4.23s
+Approach target box  : 39.02s
+Pick target box      : 34.39s
+Approach target box  : 50.04s
+Unload package       : 16.22s
+-----------------------------------
+Total Time           : 143.90s
+==============================================
+
+========== Record Time: 2026-04-29 11:10:24  ==========
+Check target type    : 4.66s
+Approach target box  : 12.40s
+Pick target box      : 35.29s
+Approach target box  : 55.01s
+Unload package       : 16.03s
+-----------------------------------
+Total Time           : 123.38s
+==============================================
+
+========== Record Time: 2026-04-29 11:13:06  ==========
+Check target type    : 4.19s
+Approach target box  : 11.27s
+Pick target box      : 34.29s
+Approach target box  : 61.52s
+Unload package       : 16.08s
+-----------------------------------
+Total Time           : 127.36s
+==============================================
+
+========== Record Time: 2026-04-29 11:17:54  ==========
+Check target type    : 142.28s
+Approach target box  : 11.86s
+Pick target box      : 34.66s
+Approach target box  : 42.05s
+Unload package       : 16.70s
+-----------------------------------
+Total Time           : 247.55s
+==============================================
+
+========== Record Time: 2026-04-29 11:11:14  ==========
+Check target type    : 4.40s
+Approach target box  : 34.28s
+Pick target box      : 32.88s
+Approach target box  : 54.85s
+Unload package       : 16.70s
+-----------------------------------
+Total Time           : 143.10s
+==============================================
+
+========== Record Time: 2026-04-29 11:16:18  ==========
+Check target type    : 160.51s
+Approach target box  : 31.39s
+Pick target box      : 31.18s
+Approach target box  : 43.37s
+Unload package       : 16.26s
+-----------------------------------
+Total Time           : 282.70s
+==============================================
+
+========== Record Time: 2026-04-29 11:25:20  ==========
+Check target type    : 259.17s
+Approach target box  : 21.48s
+Pick target box      : 34.62s
+Approach target box  : 190.04s
+Unload package       : 15.87s
+-----------------------------------
+Total Time           : 521.17s
+==============================================
+
+========== Record Time: 2026-04-29 11:28:06  ==========
+Check target type    : 4.25s
+Approach target box  : 27.76s
+Pick target box      : 34.62s
+Approach target box  : 49.55s
+Unload package       : 17.25s
+-----------------------------------
+Total Time           : 133.43s
+==============================================
+
+========== Record Time: 2026-04-30 04:15:40  ==========
+Check target type    : 4.37s
+Approach target box  : 75.36s
+Pick target box      : 34.26s
+Approach target box  : 57.59s
+Unload package       : 16.42s
+-----------------------------------
+Total Time           : 188.00s
+==============================================
+
+========== Record Time: 2026-04-30 04:19:19  ==========
+Check target type    : 4.14s
+Approach target box  : 39.57s
+Pick target box      : 34.65s
+Approach target box  : 34.76s
+Unload package       : 16.28s
+-----------------------------------
+Total Time           : 129.40s
+==============================================
+
+========== Record Time: 2026-04-30 04:38:37  ==========
+Check target type    : 4.38s
+Approach target box  : 64.31s
+Pick target box      : 35.34s
+Approach target box  : 45.29s
+Unload package       : 16.29s
+-----------------------------------
+Total Time           : 165.61s
+==============================================
+
+========== Record Time: 2026-04-30 04:41:40  ==========
+Check target type    : 4.27s
+Approach target box  : 37.91s
+Pick target box      : 34.64s
+Approach target box  : 70.13s
+Unload package       : 16.43s
+-----------------------------------
+Total Time           : 163.37s
+==============================================
+
+========== Record Time: 2026-04-30 04:50:56  ==========
+Check target type    : 41.13s
+Approach target box  : 88.53s
+Pick target box      : 34.82s
+Approach target box  : 54.74s
+Unload package       : 16.01s
+-----------------------------------
+Total Time           : 235.22s
+==============================================
+
+========== Record Time: 2026-04-30 04:53:11  ==========
+Check target type    : 4.36s
+Approach target box  : 29.35s
+Pick target box      : 35.14s
+Approach target box  : 32.79s
+Unload package       : 16.43s
+-----------------------------------
+Total Time           : 118.07s
+==============================================
+
+========== Record Time: 2026-04-30 04:59:19  ==========
+Check target type    : 159.98s
+Approach target box  : 34.52s
+Pick target box      : 34.28s
+Approach target box  : 79.14s
+Unload package       : 16.64s
+-----------------------------------
+Total Time           : 324.55s
+==============================================
+
+========== Record Time: 2026-04-30 05:02:07  ==========
+Check target type    : 4.28s
+Approach target box  : 41.14s
+Pick target box      : 34.33s
+Approach target box  : 56.10s
+Unload package       : 15.47s
+-----------------------------------
+Total Time           : 151.32s
+==============================================
+
+========== Record Time: 2026-04-30 05:09:25  ==========
+Check target type    : 259.10s
+Approach target box  : 52.13s
+Pick target box      : 34.13s
+Approach target box  : 55.64s
+Unload package       : 17.01s
+-----------------------------------
+Total Time           : 418.01s
+==============================================
+
+========== Record Time: 2026-04-30 05:11:51  ==========
+Check target type    : 4.15s
+Approach target box  : 16.42s
+Pick target box      : 34.06s
+Approach target box  : 54.70s
+Unload package       : 15.87s
+-----------------------------------
+Total Time           : 125.20s
+==============================================
+
+========== Record Time: 2026-04-30 04:38:57  ==========
+Check target type    : 4.31s
+Approach target box  : 45.65s
+Pick target box      : 34.30s
+Approach target box  : 97.23s
+Unload package       : 16.71s
+-----------------------------------
+Total Time           : 198.20s
+==============================================
+
+========== Record Time: 2026-04-30 04:38:18  ==========
+Check target type    : 4.35s
+Approach target box  : 19.63s
+Pick target box      : 34.92s
+Approach target box  : 49.13s
+Unload package       : 16.06s
+-----------------------------------
+Total Time           : 124.08s
+==============================================
+
+========== Record Time: 2026-04-30 04:41:38  ==========
+Check target type    : 4.13s
+Approach target box  : 83.05s
+Pick target box      : 34.86s
+Approach target box  : 38.79s
+Unload package       : 18.31s
+-----------------------------------
+Total Time           : 179.14s
+==============================================
+
+========== Record Time: 2026-04-30 04:39:18  ==========
+Check target type    : 4.34s
+Approach target box  : 47.07s
+Pick target box      : 33.99s
+Approach target box  : 52.55s
+Unload package       : 16.49s
+-----------------------------------
+Total Time           : 154.44s
+==============================================
+
+========== Record Time: 2026-04-30 04:41:49  ==========
+Check target type    : 4.14s
+Approach target box  : 29.13s
+Pick target box      : 34.53s
+Approach target box  : 31.53s
+Unload package       : 16.79s
+-----------------------------------
+Total Time           : 116.13s
+==============================================
+                                                                                                                                                                                                                                                                                                                                
+========== Record Time: 2026-04-30 04:44:23  ==========
+Check target type    : 4.23s
+Approach target box  : 79.16s
+Pick target box      : 36.25s
+Approach target box  : 71.37s
+Unload package       : 16.31s
+-----------------------------------
+Total Time           : 207.33s
+==============================================
+
+========== Record Time: 2026-04-30 04:41:53  ==========
+Check target type    : 4.45s
+Approach target box  : 40.54s
+Pick target box      : 32.74s
+Approach target box  : 55.48s
+Unload package       : 15.77s
+-----------------------------------
+Total Time           : 148.98s
+==============================================
+                                                                                                                                                                                                                                                                                                                                
+========== Record Time: 2026-05-01 15:58:49  ==========
+Check target type    : 4.38s
+Approach target box  : 38.55s
+Pick target box      : 35.61s
+Approach target box  : 51.41s
+Unload package       : 16.46s
+-----------------------------------
+Total Time           : 146.41s
+==============================================
+
+========== Record Time: 2026-05-01 16:42:59  ==========
+Check target type    : 4.15s
+Approach target box  : 35.53s
+Pick target box      : 45.50s
+Approach target box  : 54.21s
+Unload package       : 17.21s
+-----------------------------------
+Total Time           : 156.60s
+==============================================
+
+========== Record Time: 2026-05-06 04:49:38  ==========
+Check target type    : 4.47s
+Approach target box  : 10.05s
+Pick target box      : 34.72s
+Approach target box  : 40.30s
+Unload package       : 15.94s
+-----------------------------------
+Total Time           : 105.48s
+==============================================
+
+========== Record Time: 2026-05-06 05:32:10  ==========
+Check target type    : 4.16s
+Approach target box  : 27.72s
+Pick target box      : 34.86s
+Approach target box  : 33.70s
+Unload package       : 21.57s
+-----------------------------------
+Total Time           : 122.01s
+==============================================
+
+========== Record Time: 2026-05-06 05:35:08  ==========
+Check target type    : 4.23s
+Approach target box  : 34.01s
+Pick target box      : 34.56s
+Approach target box  : 64.57s
+Unload package       : 18.60s
+-----------------------------------
+Total Time           : 155.96s
+==============================================
+
+========== Record Time: 2026-05-06 05:52:38  ==========
+Check target type    : 4.27s
+Approach target box  : 24.41s
+Pick target box      : 35.25s
+Approach target box  : 69.22s
+Unload package       : 16.45s
+-----------------------------------
+Total Time           : 149.60s
+==============================================
+
+========== Record Time: 2026-05-06 05:55:58  ==========
+Check target type    : 4.18s
+Approach target box  : 76.35s
+Pick target box      : 34.26s
+Approach target box  : 42.71s
+Unload package       : 17.90s
+-----------------------------------
+Total Time           : 175.40s
+==============================================
+
+========== Record Time: 2026-05-06 06:01:00  ==========
+Check target type    : 144.45s
+Approach target box  : 37.24s
+Pick target box      : 34.64s
+Approach target box  : 42.29s
+Unload package       : 15.53s
+-----------------------------------
+Total Time           : 274.15s
+==============================================
+
+========== Record Time: 2026-05-06 06:03:19  ==========
+Check target type    : 4.22s
+Approach target box  : 22.89s
+Pick target box      : 34.59s
+Approach target box  : 44.58s
+Unload package       : 16.45s
+-----------------------------------
+Total Time           : 122.73s
+==============================================
+
+========== Record Time: 2026-05-06 06:09:13  ==========
+Check target type    : 175.95s
+Approach target box  : 50.01s
+Pick target box      : 34.79s
+Approach target box  : 58.13s
+Unload package       : 16.32s
+-----------------------------------
+Total Time           : 335.20s
+==============================================
+
+========== Record Time: 2026-05-06 06:11:34  ==========
+Check target type    : 4.18s
+Approach target box  : 27.26s
+Pick target box      : 34.55s
+Approach target box  : 38.41s
+Unload package       : 16.39s
+-----------------------------------
+Total Time           : 120.78s
+==============================================
+
+========== Record Time: 2026-05-06 06:20:31  ==========
+Check target type    : 4.23s
+Approach target box  : 35.19s
+Pick target box      : 33.48s
+Approach target box  : 54.21s
+Unload package       : 16.21s
+-----------------------------------
+Total Time           : 143.32s
+==============================================
+
+========== Record Time: 2026-05-06 06:22:51  ==========
+Check target type    : 4.21s
+Approach target box  : 29.97s
+Pick target box      : 34.08s
+Approach target box  : 38.55s
+Unload package       : 16.21s
+-----------------------------------
+Total Time           : 123.02s
+==============================================

@@ -11,7 +11,6 @@ from geometry_msgs.msg import Twist
 
 DETECT = False
 
-# Global variables are used for communication between threads
 aruco_detector_res = None
 ids = None
 _id_get = 0
@@ -102,7 +101,7 @@ def stage_quick_rot(fir_dir = 1, first_rot_times = 3, second_rot_times = 6):
 def stage_slow_rot(slow_rot_times = 6):
     _dir = 1
     sp = 0.5
-    time_gap = 0.64 #Rotating Time
+    time_gap = 0.64 
 
     #pre read some data 
     rot_once(1,1,0)
@@ -112,7 +111,7 @@ def stage_slow_rot(slow_rot_times = 6):
 
         if res != -1:
             _perc = res[2]
-            if _perc < 0.4: #Let the camera center align the center of the screen resolution
+            if _perc < 0.4: 
                 _dir = 1
             elif _perc > 0.6:
                 _dir = -1
@@ -154,14 +153,14 @@ def stages_rot(_dir = 1, _first_dir_times = 3, _second_dir_times = 6):
 
 def Horizontal_movement(times = 6):
     sp = 0.2
-    time_gap = 0.50 #Translating Time
+    time_gap = 0.50
 
     for i in range(times):
         res = aruco_detector.process_qr_data_2()
 
         if res != -1:
             _perc = res[2]
-            if _perc < 0.4: #Let the camera center align the center of the screen resolution
+            if _perc < 0.4: 
                 _dir = 1
             elif _perc > 0.6:
                 _dir = -1
@@ -214,88 +213,72 @@ def move_to_center():
         print ("miss target")
         return 0
     
-# Thread for reading QR code position information
 def qr_data_thread():
     global qr_data, stop_threads, task_completed
     print("QR detection thread started")
     
-    # QR Code Loss Detection Counter
     qr_not_found_count = 0
-    # Maximum number of times not detected (exit after this many times)
-    max_not_found_count = 20  # 2 seconds (0.1 second/loop * 20 loops)
+
+    max_not_found_count = 20  
     
     try:
         while not stop_threads:
             try:
-                # Obtain ArUco QR code information
                 res = aruco_detector.process_qr_data_2() 
                 
                 with lock:
                     if res != -1:
-                        # Successfully detected ArUco QR code, reset loss count
-                        qr_data['distance'] = res[0]  # Distance from camera to QR code
-                        qr_data['angle'] = res[1]     # Angle from camera to QR code
-                        qr_data['percent'] = res[2]   # Position percentage of QR code in screen
+                        qr_data['distance'] = res[0] 
+                        qr_data['angle'] = res[1]   
+                        qr_data['percent'] = res[2]  
                         qr_data['found'] = True
                         qr_not_found_count = 0
                     else:
-                        # Failed to detect ArUco QR code, increase loss count
                         qr_data['found'] = False
                         qr_not_found_count += 1
                 
-                # Check if the number of consecutive times not detected exceeds the maximum allowed
                 if qr_not_found_count >= max_not_found_count:
                     print(f"QR code not detected for {qr_not_found_count} consecutive times, setting stop flag.")
                     stop_threads = True
                     break
-                
-                # Check if the task has been completed
+
                 if task_completed:
                     stop_threads = True
                     break
                 
             except Exception as e:
                 print(f"Error in QR data processing: {str(e)}")
-                # Reset status on error
                 with lock:
                     qr_data['found'] = False
-            
-            # Check if the stop flag has been set
+
             if stop_threads:
                 print("Stop flag detected in QR thread, exiting loop.")
                 break
                 
-            time.sleep(0.1)  # Brief sleep to reduce CPU usage
+            time.sleep(0.1)  
     except Exception as e:
         print(f"Critical error in QR thread: {str(e)}")
     finally:
-        # Ensure final status is set
         with lock:
             qr_data['found'] = False
-        # Close the camera
         print("Closing camera before exiting QR detection thread")
         aruco_detector.close_camera()
         print("QR detection thread exited")
 
-# Car approaching QR code control thread
 def approach_thread():
     global stop_threads, task_completed
     print(f"Approach thread started, initial stop_threads: {stop_threads}")
     
-    # Counter for consecutive times not detected
     qr_not_found_count = 0
-    # Maximum number of times not detected (exit after this many times)
-    max_not_found_count = 15  # 3 seconds (0.2 second/loop * 15 loops)
-    
-    # Number of times to confirm target position, to avoid false positives
+    max_not_found_count = 15  
+
     target_confirm_count = 3
     reached_target_count = 0
     
-    # Distance stability detection parameters
-    previous_distance = None  # Previous distance detected
-    distance_stability_count = 0  # Number of times distance is stable
-    distance_stability_threshold = 10  # Number of times to confirm distance stability
-    distance_diff_threshold = 0.9  # Distance difference threshold (0-0.9cm)
+    previous_distance = None  
+    distance_stability_count = 0  
+    distance_stability_threshold = 10  
+    distance_diff_threshold = 0.9  
     
     try:
         while not stop_threads:
@@ -303,97 +286,80 @@ def approach_thread():
                 current_data = qr_data.copy()
             
             if current_data['found']:
-                # Reset counter when QR code is detected
                 qr_not_found_count = 0
                 
                 l = current_data['distance']
                 ag = current_data['angle']
                 print(f"Distance: {l:.1f} cm, Angle: {ag:.1f}")
-                
-                # Calculate distance difference and check for stability
+
                 if previous_distance is not None and previous_distance > 0:
                     distance_diff = abs(l - previous_distance)
-                    # Check if distance difference is within 0-0.9cm range
                     if 0 <= distance_diff <= distance_diff_threshold:
                         distance_stability_count += 1
                         print(f"Distance difference: {distance_diff:.1f} cm, stability count: {distance_stability_count}/{distance_stability_threshold}")
                     else:
-                        # Distance difference exceeds threshold, reset stability count
                         distance_stability_count = 0
                         print(f"Distance difference: {distance_diff:.1f} cm exceeds threshold, resetting stability count")
-                
-                # Time since last update
+
                 previous_distance = l
                 
-                # When the distance is greater than 3 cm, control the car to approach
                 if l > 5:
-                    # If the car has already reached the target distance, and now it's moving away, stop the task
                     if reached_target_count > 0:
                         print("Target moved away after being reached. Task completed.")
                         task_completed = True
                         stop_threads = True
                         break
                         
-                    # Maintain the existing alignment logic
-                    if stage_slow_rot(6):  # If the QR code is aligned
+                    if stage_slow_rot(6): 
                         with lock:
                             current_data = qr_data.copy()
                         if current_data['found']:
-                            # Adjust travel time based on distance
                             if l > 30:
-                                front_once(2, 0.01)  # Long distance, long travel time
+                                front_once(2, 0.01) 
                             elif 20 < l <= 30:
-                                front_once(1.2, 0.01)  # Medium distance, moderate travel time
+                                front_once(1.2, 0.01)  
                             elif 5 < l <= 20:
-                                front_once(0.5, 0.01)  # Short distance, short travel time
+                                front_once(0.5, 0.01)  
                     else:
-                        stages_rot(1, 2, 4)  # Rotate to align with QR code
+                        stages_rot(1, 2, 4) 
                 else:
-                    # Distance is less than or equal to 3 cm, increase count
                     reached_target_count += 1
                     print(f"Reached target distance ({l:.1f} cm), count: {reached_target_count}/{target_confirm_count}")
                     
-                    # Consecutively detect the target distance multiple times to confirm completion
                     if reached_target_count >= target_confirm_count:
                         print("Target distance confirmed, task completed.")
                         task_completed = True
                         stop_threads = True
                         break
             else:
-                # QR code not found, increase count
                 qr_not_found_count += 1
                 print(f"QR code not found, count: {qr_not_found_count}/{max_not_found_count}")
                 
-                # Consecutively not detect QR code for too many times, exit thread
                 if qr_not_found_count >= max_not_found_count:
                     print(f"QR code not detected for {qr_not_found_count} consecutive times, exiting thread.")
                     stop_threads = True
                     break
             
-            # Check if stop flag is set
             if stop_threads:
                 print("Stop flag detected, exiting loop.")
                 break
                 
-            time.sleep(0.2)  # Control loop frequency
+            time.sleep(0.2)
     except Exception as e:
         print(f"Error in approach thread: {str(e)}")
         stop_threads = True
     finally:
-        # Ensure the car stops
         pub_vel(0, 0, 0)
         print("Approach thread exited")
 
 def main_process(first_dir = 1):
     global stop_threads, task_completed
     
-    # Set initial status
     stop_threads = False
     task_completed = False
     camera_initialized = False
     
     try:
-        # Initialize camera
         if not aruco_detector.init_camera():
             print("Failed to initialize camera")
             return 0
@@ -403,27 +369,24 @@ def main_process(first_dir = 1):
         rot_once(1, 3, 0, 0)
 
         print("Step 1")
-        Horizontal_movement(6)  # Horizontal translation, let the center of the screen align with the ArUco code
+        Horizontal_movement(6)  
         
         print("Step 2")
         # step 2: rotation and point
-        if stages_rot(first_dir, 2, 5) == 0:  # Rotate right 2 times, left 5 times, let the center of the screen align with the ArUco code
+        if stages_rot(first_dir, 2, 5) == 0:  
             print("Initial found failed")        
             return 0
 
         print("Step 3: Starting dual-thread approach")
         
-        # Create and start threads
         qr_thread = threading.Thread(target=qr_data_thread)
         approach_thread_obj = threading.Thread(target=approach_thread)
         
         qr_thread.start()
         approach_thread_obj.start()
         
-        # Wait for the approach thread to complete
         approach_thread_obj.join()
         
-        # Stop the QR code reading thread
         stop_threads = True
         qr_thread.join()
         
@@ -432,8 +395,7 @@ def main_process(first_dir = 1):
         print(f"Error in main process: {str(e)}")
         stop_threads = True
     finally:
-        pub_vel(0, 0, 0)  # Ensure the car stops
-        # Only close the camera in the main_process's finally block to avoid repeated closing
+        pub_vel(0, 0, 0) 
         if camera_initialized:
             print("Closing camera in main process finally block")
             aruco_detector.close_camera()
@@ -449,7 +411,7 @@ if __name__=='__main__':
         print("Keyboard interrupt detected, stopping threads...")
         stop_threads = True
         aruco_detector.close_camera()
-        pub_vel(0, 0, 0)  # Ensure the car stops
+        pub_vel(0, 0, 0)  
     except Exception as e:
         print(f"Unexpected error in main: {str(e)}")
         stop_threads = True

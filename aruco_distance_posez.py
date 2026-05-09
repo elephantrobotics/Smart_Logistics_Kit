@@ -5,12 +5,10 @@ import cv2.aruco as aruco
 import math
 from collections import deque
 
-# Camera internals: intrinsic parameter matrix of the camera
 camera_matrix = np.array([[785.855437,  0.000000,   451.670922], 
                           [0.000000,    584.820336, 259.056856],
                           [0.000000,    0.000000,   1.000000]])
 
-# Distortion coefficient matrix
 dist_matrix = np.array(([[0.095135, -0.109279, -0.002513,  -0.002418, 0.000000]]))
 
 DEBUG = False
@@ -43,6 +41,7 @@ def gstreamer_pipeline(
     )
 
 cap = cv2.VideoCapture(gstreamer_pipeline(flip_method=0), cv2.CAP_GSTREAMER)
+
 font = cv2.FONT_HERSHEY_SIMPLEX #font for displaying text (below)
 distance_values = deque(maxlen=5)
 
@@ -52,14 +51,12 @@ while True:
     # print(f"Height: {height}, Width: {width}")
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     aruco_dict = cv2.aruco.getPredefinedDictionary(aruco.DICT_6X6_250)
-    parameters =  cv2.aruco.DetectorParameters() # Initialize detector parameters with default values
+    parameters =  cv2.aruco.DetectorParameters() 
 
     corners, ids, rejectedImgPoints = aruco.detectMarkers(gray,aruco_dict,parameters=parameters)
 
     if ids is not None:
-        # Use different size parameters based on QR code ID
         if ids is not None and len(ids) > 0:
-            # For id3 and id4 use 30mm (0.030 meters), others use 40mm (0.040 meters)
             current_marker_length = 0.030 if ids[0] in [3, 4] else 0.040
         else:
             current_marker_length = 0.040
@@ -68,7 +65,6 @@ while True:
         (rvec-tvec).any() # get rid of that nasty numpy value array error
 
         for i in range(rvec.shape[0]):
-            # Use the current QR code's corresponding size parameter
             cv2.drawFrameAxes(frame, camera_matrix, dist_matrix, rvec[i, :, :], tvec[i, :, :], current_marker_length)
             cv2.aruco.drawDetectedMarkers(frame, corners,ids)
 

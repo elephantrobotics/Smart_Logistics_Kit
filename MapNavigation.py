@@ -41,9 +41,15 @@ class MapNavigation:
         pose.pose.pose.orientation.y = 0.0
         pose.pose.pose.orientation.z = orientation_z
         pose.pose.pose.orientation.w = orientation_w
-        pose.pose.covariance = [0.25, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.25, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 
-         0.0,0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 
-         0.0,0.0, 0.0, 0.0, covariance]
+        cov_list = [0.0] * 36
+        cov_list[0]  = 0.10       
+        cov_list[7]  = 0.25       
+        cov_list[14] = 99999.0    
+
+        cov_list[21] = 99999.0   
+        cov_list[28] = 99999.0    
+
+        cov_list[35] = covariance
         rospy.sleep(1)
         self.pub_setpose.publish(pose)
         # rospy.loginfo('Published robot pose: %s' % pose)
@@ -87,7 +93,7 @@ class MapNavigation:
         twist.angular.z = theta
         self.pub.publish(twist)
 
-    # Suction pump control function
+    # pump control function
     def pump_on(self):
         GPIO.output(26, GPIO.LOW)
         GPIO.output(19, GPIO.HIGH)
@@ -97,3 +103,8 @@ class MapNavigation:
         GPIO.output(19, GPIO.LOW)
         time.sleep(0.05)
         GPIO.output(19, GPIO.HIGH)
+    
+    def cancel_goal(self):
+        goal_id = GoalID()
+        self.pub_cancel.publish(goal_id)
+        rospy.loginfo("Canceled current navigation goal")

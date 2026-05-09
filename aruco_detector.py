@@ -55,24 +55,20 @@ def close_camera():
         return True
     return False
 
-# Camera initialization will be controlled by the caller and will no longer be automatic.
+
 font = cv2.FONT_HERSHEY_SIMPLEX  # font for displaying text (below)
 
-# Predefined constant parameters prevent access to the camera at the module level.
 CAM_WIDTH = 960
 CAM_HEIGHT = 540
 CAM_FPS = 21
 
-# Default values ​​for calculating center point and focal length
 center = (CAM_WIDTH / 2, CAM_HEIGHT / 2)
 focal_length = CAM_WIDTH
 
-# Camera internals Camera internal parameter matrix
 camera_matrix = np.array([[785.855437,  0.000000,   451.670922], 
                           [0.000000,    584.820336, 259.056856],
                           [0.000000,    0.000000,   1.000000]])
 
-#Distortion coefficient matrix
 dist_coeffs = np.array(([[0.095135, -0.109279, -0.002513,  -0.002418, 0.000000]]))
 
 # print(camera_matrix,dist_coeffs)
@@ -112,7 +108,6 @@ dist_coeffs = np.array(([[0.095135, -0.109279, -0.002513,  -0.002418, 0.000000]]
 # 0.000000 598.167861 257.740784 0.000000
 # 0.000000 0.000000 1.000000 0.000000
 
-# Window creation will occur in the displayFrame function, avoiding module-level initialization.
 
 marker_length = 0.04   # -- Here, the measurement unit is metre.0.055 is for orgianl big
 
@@ -178,7 +173,6 @@ def _detect(corners, ids, imgWithAruco):
         :return:               x,y,z (units is cm), roll, pitch, yaw (units is degree)
         """
         try:
-            # Check the validity of the input parameters.
             if corners is None or len(corners) == 0 or imgWithAruco is None:
                 return None
             
@@ -204,19 +198,15 @@ def _detect(corners, ids, imgWithAruco):
                         cv2.LINE_AA)
             if ids is not None:   # if aruco marker detected
                 try:
-                    # Use different size parameters based on the QR code ID.
-                    # ids is an array, the first element of which is the ID of the tag.
                     current_marker_length = 0.03 if ids[0] in [3, 4] else 0.04
                     rvec, tvec, _ = cv2.aruco.estimatePoseSingleMarkers(corners, current_marker_length, camera_matrix, dist_coeffs)
                     for i in range(rvec.shape[0]):
-                        # Use the size parameters corresponding to the current QR code
                         imgWithAruco = cv2.drawFrameAxes(imgWithAruco, camera_matrix, dist_coeffs, rvec, tvec, current_marker_length)
 
                     # --- The midpoint displays the ID number
                     cornerMid = (int((x1[0] + x2[0] + x3[0] + x4[0]) / 4),
                                  int((x1[1] + x2[1] + x3[1] + x4[1]) / 4))
 
-                    # Use the passed-in `imgWithAruco` instead of the global `frame`.
                     cv2.putText(imgWithAruco, "id=" + str(ids), cornerMid,
                                 font, 1, (255, 255, 255), 1, cv2.LINE_AA)
 
@@ -235,7 +225,6 @@ def _detect(corners, ids, imgWithAruco):
                     pose_data[4] = math.degrees(pitch_marker)
                     pose_data[5] = math.degrees(yaw_marker)
 
-                    # Use tuples as keys because arrays cannot be used as dictionary keys.
                     pose_data_dict[str(ids)] = pose_data.copy()
 
                     roll_deg = math.degrees(roll_marker)
@@ -248,8 +237,7 @@ def _detect(corners, ids, imgWithAruco):
                     pass
         except Exception:
             pass
-        
-        # If an error occurs or a valid flag is not detected, reset pose_data and return None.
+
         pose_data[0] = None
         pose_data[1] = None
         pose_data[2] = None
@@ -259,19 +247,19 @@ def _detect(corners, ids, imgWithAruco):
 
 def displayFrame(frame_input):
     try:
-        # Ensure the window exists
         if not cv2.getWindowProperty("show", cv2.WND_PROP_VISIBLE):
             cv2.namedWindow("show", cv2.WINDOW_AUTOSIZE)
         cv2.imshow("show", frame_input)
-        # Use a smaller waitKey value to reduce latency, but maintain window responsiveness.
         cv2.waitKey(1)
     except Exception:
-        # Ignore any related errors and ensure the program continues running.
         pass
-
+def closeDisplayFrame():
+    try:
+        cv2.destroyAllWindows()
+    except Exception:
+        pass
 def getArucoCode(display_mode = True ):
     global cam
-    # Check if the camera is turned off or not initialized.
     if not init_camera():
         print("Camera failed!")
         return None
@@ -279,18 +267,18 @@ def getArucoCode(display_mode = True ):
     # read frame once
     frame_makers = None
     try:
-        ret, frame = cam.read() #Acquire camera data stream
+        ret, frame = cam.read() 
         if not ret or frame is None:
             print("get aruco code none",ret,cam)
             return None
         
-        frame = cv2.flip(frame,-1) #Vertical mirror flip
-        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY) #Grayscale
-        aruco_dict = cv2.aruco.getPredefinedDictionary(aruco.DICT_6X6_250) #Set a predefined dictionary
+        frame = cv2.flip(frame,-1) 
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY) 
+        aruco_dict = cv2.aruco.getPredefinedDictionary(aruco.DICT_6X6_250) 
         
-        parameters = cv2.aruco.DetectorParameters() #Initialize detector parameters using default values.
+        parameters = cv2.aruco.DetectorParameters() 
         
-        corners, ids, rejectedImgPoints = aruco.detectMarkers(gray, aruco_dict, parameters=parameters) #The aruco.detectMarkers() function can be used to detect markers, returning their IDs and the coordinates of the four corner points of the marker.
+        corners, ids, rejectedImgPoints = aruco.detectMarkers(gray, aruco_dict, parameters=parameters) 
 
         if ids is not None:
             try:
@@ -301,16 +289,15 @@ def getArucoCode(display_mode = True ):
                 if ids_len > 0:
                     for i in range(ids_len):
                         try:
-                            aruco_res = _detect(corners[i:i+1], ids[i], frame) #Input the coordinates of four corner points, calculate and return x, y, z (units are cm), roll, pitch, yaw (units are degrees), and arcade id.
+                            aruco_res = _detect(corners[i:i+1], ids[i], frame) 
                             if aruco_res != None:
                                 res.append(aruco_res)
                         except Exception:
-                            pass  # Errors in ignoring single marker detection
-                        if display_mode and frame_makers is not None:
-                            displayFrame(frame_makers)
+                            pass  
+                    if display_mode and frame_makers is not None:
+                        displayFrame(frame_makers)
                 return (res, ids)
             except Exception:
-                # If an error occurs during processing, try displaying the original frame.
                 if display_mode:
                     displayFrame(frame)
                 return None
@@ -326,10 +313,9 @@ def getArucoCode(display_mode = True ):
     finally:
         print("getArucoCode done")
 def check_box_qrcodes():
-    """Check for the presence of express delivery boxes by detecting ID3 and ID4 QR codes, and identify their stacking relationship and left/right position."""
+    """Check for delivery boxes by detecting the id3 and id4 QR codes, and identify the stacking relationship and left-right positions"""
     global cam
-    print("Starting to detect the QR code on the express delivery box...")
-    # Check if the camera is turned off or not initialized.
+    print("Start checking box QR codes...")
     if not init_camera():
         print("Camera failed!")
         return {"target_id": None, "is_upper": False}
@@ -338,18 +324,15 @@ def check_box_qrcodes():
         aruco_dict = cv2.aruco.getPredefinedDictionary(aruco.DICT_6X6_250)
         parameters = cv2.aruco.DetectorParameters()
         
-        # The number of tests increases the accuracy of the test.
         detect_count = 0
         max_detect_count = 10
         
         id3_detected_times = 0
         id4_detected_times = 0
-        
-        # Record the (X,Y) coordinates of id3 and id4
-        id3_positions = []  # Record the (X,Y) coordinates of id3
-        id4_positions = []  # Record the (X,Y) coordinates of id4
-        
-        # Record all detected markers and their locations for each frame.
+
+        id3_positions = [] 
+        id4_positions = []  
+
         all_markers_data = []
         
         while detect_count < max_detect_count:
@@ -361,26 +344,21 @@ def check_box_qrcodes():
             
             frame = cv2.flip(frame, -1)
             gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-            
-            # Increase contrast to improve detection success rate
+
             gray = cv2.equalizeHist(gray)
             corners, ids, rejectedImgPoints = aruco.detectMarkers(gray, aruco_dict, parameters=parameters)
-            
-            # Save the detection results of the current frame.
+
             frame_markers = []
-            
-            # Check if id3 or id4 is detected.
+
             current_detected_ids = []
             if ids is not None:
                 for i, detected_id in enumerate(ids):
                     current_detected_ids.append(detected_id[0])
-                    # Calculate the center point of the mark
                     if corners[i] is not None and len(corners[i]) > 0:
                         corner = corners[i][0]
                         center_x = (corner[0][0] + corner[1][0] + corner[2][0] + corner[3][0]) / 4
                         center_y = (corner[0][1] + corner[1][1] + corner[2][1] + corner[3][1]) / 4
-                        
-                        # Save to current frame data
+
                         frame_markers.append({
                             "id": detected_id[0],
                             "x": center_x,
@@ -390,40 +368,39 @@ def check_box_qrcodes():
                         if detected_id[0] == 3:
                             id3_detected_times += 1
                             id3_positions.append((center_x, center_y))
-                            print(f"id3 was detected ({detect_count+1}th detection), X coordinate: {center_x}, Y coordinate: {center_y}",flush=True)
+                            print(f"ID3 detected (The{detect_count+1}th detection)，X coordinate: {center_x}，Y coordinate: {center_y}",flush=True)
                         elif detected_id[0] == 4:
                             id4_detected_times += 1
                             id4_positions.append((center_x, center_y))
-                            print(f"Detected ID4 ({detect_count+1}th detection), X coordinate: {center_x}, Y coordinate: {center_y}",flush=True)
+                            print(f"ID4 detected (The{detect_count+1}th detection)，X coordinate: {center_x}，Y coordinate: {center_y}",flush=True)
             
             # Save frame data
             if frame_markers:
                 all_markers_data.append(frame_markers)
             
-            # Print all IDs detected in the current frame for debugging purposes.
-            print(f"ID detected in the {detect_count+1}th iteration:{current_detected_ids}")
+            # current frame detected IDs
+            print(f"Frame {detect_count+1}: {current_detected_ids}")
             
             detect_count += 1
             time.sleep(0.3)
         
-        # Print statistical results
-        print(f"Detection complete. id3 was detected {id3_detected_times} times, and id4 was detected {id4_detected_times} times.")
+        # Detection results
+        print(f"Detection completed. id3 detected {id3_detected_times} times, id4 detected {id4_detected_times} times")
         
-        # Set a detection threshold; the system will only consider a virus present if it is detected at least three times.
+        # Set detection threshold to 3 times
         min_detection_threshold = 3
         
-        # The presence of express delivery boxes is determined based on the number of tests conducted.
+        # Check if delivery boxes are detected by id3 and id4 QR codes
         has_id3 = id3_detected_times >= min_detection_threshold
         has_id4 = id4_detected_times >= min_detection_threshold
-        
-        # Returns a dictionary containing the target ID and whether it is a parent layer.
+
         result = {"target_id": None, "is_upper": False}
         
-        # Count the actual number of express delivery boxes (deduplicated).
+        # Count unique delivery boxes
         unique_id3_boxes = set()
         unique_id4_boxes = set()
         
-        # Determine if they belong to the same box based on the similarity of their X/Y coordinates (allowing for a 10-pixel error).
+        # Check if the boxes are the same based on X/Y coordinates (allow 10 pixel error)
         for x, y in id3_positions:
             found = False
             for box_x, box_y in list(unique_id3_boxes):
@@ -442,293 +419,250 @@ def check_box_qrcodes():
             if not found:
                 unique_id4_boxes.add((x, y))
         
-        # Convert the collection to a list for easier subsequent processing.
+        # Convert set to list for further processing
         id3_boxes_list = list(unique_id3_boxes)
         id4_boxes_list = list(unique_id4_boxes)
         
         total_boxes = len(unique_id3_boxes) + len(unique_id4_boxes)
-        print(f"In reality, {len(unique_id3_boxes)} id3 boxes and {len(unique_id4_boxes)} id4 boxes were detected, for a total of {total_boxes} boxes.")
+        print(f"actually detected {len(unique_id3_boxes)} id3 boxes and {len(unique_id4_boxes)} id4 boxes")
         
-        # No target was detected
+        # Check if any delivery box is detected
         if total_boxes == 0:
-            print("No parcel boxes were detected.")
+            print("No delivery box detected")
             return result
         
-        # 1. Case with only one express box
+        # 1. one delivery box case
         if len(unique_id3_boxes) == 1 and len(unique_id4_boxes) == 0:
             id3_y = id3_boxes_list[0][1]
-            # The layer with a y-coordinate below 250 is the upper layer, and the layer with a y-coordinate above 250 is the lower layer.
+            # y coordinate -<250 is upper, 250 is
             is_upper_id3 = id3_y < 250
             if is_upper_id3:
-                print(f"There is only one id3 parcel box, with y-coordinate = {id3_y}, located in the upper area; it can be directly crawled.")
+                print(f"only one id3 box detected, y coordinate={id3_y}，In the upper area, grab directly")
             else:
-                print(f"There is only one id3 parcel box, with y-coordinate = {id3_y}, located in the lower area; it can be directly crawled.")
+                print(f"only one id3 box detected, y coordinate={id3_y}，In the lower area, grab directly")
             result["target_id"] = "id3"
             result["is_upper"] = is_upper_id3
             return result
         elif len(unique_id4_boxes) == 1 and len(unique_id3_boxes) == 0:
             id4_y = id4_boxes_list[0][1]
-            # The layer with a y-coordinate below 250 is the upper layer, and the layer with a y-coordinate above 250 is the lower layer.
+            # y coordinate -<250 is upper, 250 is lower
             is_upper_id4 = id4_y < 250
             if is_upper_id4:
-                print(f"There is only one id4 parcel box, with y-coordinate = {id4_y}, located in the upper area; it can be directly crawled.")
+                print(f"only one id4 box detected, y coordinate={id4_y}，In the upper area, grab directly")
             else:
-                print(f"There is only one id4 parcel box, with y-coordinate = {id4_y}, located in the lower area; it can be directly crawled.")
+                print(f"only one id4 box detected, y coordinate={id4_y}，In the lower area, grab directly")
             result["target_id"] = "id4"
             result["is_upper"] = is_upper_id4
             return result
         
-        # 2. The situation of the two express boxes
+        # 2. two delivery boxes case
         elif total_boxes == 2:
-            print("Two express boxes were detected.")
+            print("detect 2 delivery boxes")
             
-            # Case 2.1: One ID3 and one ID4
+            # 2.1: one id3 and one id4 case
             if len(unique_id3_boxes) == 1 and len(unique_id4_boxes) == 1:
-                print("One ID3 and one ID4")
-                
-                # Determine the positions of id3 and id4
+                print("one id3 and one id4")
+
                 id3_x, id3_y = id3_boxes_list[0]
                 id4_x, id4_y = id4_boxes_list[0]
-                
-                #Check for stacking (Y coordinate difference greater than the threshold).
-                if abs(id3_y - id4_y) > 20:  # Stacking judgment threshold
-                    # If there is stacking, prioritize grabbing the uppermost layer (those with smaller Y-coordinates).
+
+                if abs(id3_y - id4_y) > 20: 
                     if id3_y < id4_y:
                         result["target_id"] = "id3"
                         result["is_upper"] = True
-                        print(f"Stacking was detected; id3 is on the upper layer ({id3_y} < {id4_y}), so the upper-layer id3 will be crawled first.")
+                        print(f"overlap detected, id3 is upper ({id3_y} < {id4_y})，grab id3")
                     else:
                         result["target_id"] = "id4"
                         result["is_upper"] = True
-                        print(f"Stacking was detected; id4 is on the upper layer ({id4_y} < {id3_y}), so id4 on the upper layer will be crawled first.")
+                        print(f"overlap detected, id4 is upper ({id4_y} < {id3_y})，grab id4")
                 else:
-                    #  Without stacking, use a y-coordinate threshold of 250 to determine the upper and lower layers.
                     id3_x, id3_y = id3_boxes_list[0]
                     id4_x, id4_y = id4_boxes_list[0]
-                    
-                    # The layer with a y-coordinate below 250 is the upper layer, and the layer with a y-coordinate above 250 is the lower layer.
                     if id3_y < 250 and id4_y >= 250:
-                        # ID3 is in the upper layer, and ID4 is in the lower layer.
                         result["target_id"] = "id3"
                         result["is_upper"] = True
-                        print(f"If different IDs are at the same level, and id3 is in the upper-level region ({id3_y} < 250), then id3 will be crawled first.")
+                        print(f"id3 in upper area ({id3_y} < 250)，grab id3")
                     elif id4_y < 250 and id3_y >= 250:
-                        # ID4 is in the upper layer, and ID3 is in the lower layer.
                         result["target_id"] = "id4"
                         result["is_upper"] = True
-                        print(f"If different IDs are at the same level, and id4 is in the upper-level region ({id4_y} < 250), then id4 will be crawled first.")
+                        print(f"id4 in upper area ({id4_y} < 250)，grab id4")
                     else:
-                        # If both are in the upper or lower layer, prioritize fetching ID3.
                         result["target_id"] = "id3"
-                        # Set the is_upper flag according to the actual region.
                         if id3_y < 250 and id4_y < 250:
                             result["is_upper"] = True
-                            print(f"If different IDs are at the same level and all are in the upper area, prioritize crawling ID3.")
+                            print(f"Different IDs on the same layer and both in the upper area, prioritize capturing id3")
                         else:
                             result["is_upper"] = False
-                            print(f"If different IDs are at the same level and all are in the lower level area, prioritize crawling ID3.")
+                            print(f"Different IDs on the same layer and both in the lower area, prioritize capturing id3")
                 
-                print(f"id3 coordinates: ({id3_x}, {id3_y}), id4 coordinates: ({id4_x}, {id4_y})")
+                print(f"id3 position: ({id3_x}, {id3_y}), id4 position: ({id4_x}, {id4_y})")
                 return result
-            
-            # Scenario 2.2: Two express boxes with the same ID
+
             elif len(unique_id3_boxes) == 2:
-                print("Two ID3 parcel boxes")
-                
-                # Check for stacking (Y coordinate difference greater than the threshold).
+                print("two id3 boxes")
+
                 y1, y2 = id3_boxes_list[0][1], id3_boxes_list[1][1]
-                if abs(y1 - y2) > 20:  # Stacking judgment threshold
-                    # If there is stacking, prioritize grabbing the uppermost layer (those with smaller Y-coordinates).
+                if abs(y1 - y2) > 20: 
                     upper_box = id3_boxes_list[0] if y1 < y2 else id3_boxes_list[1]
-                    print(f"When two ID3s are stacked, the ID3 of the upper layer is crawled first.")
+                    print(f"Two id3 stacked, prioritize grabbing the upper id3")
                     result["target_id"] = "id3"
                     result["is_upper"] = True
                     return result
                 else:
-                    # Without stacking, use a y-coordinate threshold of 250 to determine the upper and lower layers.
-                    # The layer with a y-coordinate below 250 is the upper layer, and the layer with a y-coordinate above 250 is the lower layer.
                     y1, y2 = id3_boxes_list[0][1], id3_boxes_list[1][1]
                     
                     if y1 < 250 and y2 >= 250:
-                        # One is at the top level, and the other is at the bottom level; the one at the top level will be crawled first.
                         upper_box = id3_boxes_list[0] if y1 < y2 else id3_boxes_list[1]
-                        print(f"If two ID3 values ​​are not stacked, prioritize crawling the ID3 of the upper layer (Y coordinate = {min(y1, y2)} < 250).")
+                        print(f"Two id3 stacked, prioritize grabbing the upper id3 (Y coordinate={min(y1, y2)} < 250)")
                         result["target_id"] = "id3"
                         result["is_upper"] = True
                         return result
                     elif y2 < 250 and y1 >= 250:
-                        # One is at the top level, and the other is at the bottom level; the one at the top level will be crawled first.
                         upper_box = id3_boxes_list[1] if y2 < y1 else id3_boxes_list[0]
-                        print(f"If two ID3 values ​​are not stacked, prioritize crawling the ID3 of the upper layer (Y coordinate = {min(y1, y2)} < 250).")
+                        print(f"Two id3 stacked, prioritize grabbing the upper id3 (Y coordinate={min(y1, y2)} < 250)")
                         result["target_id"] = "id3"
                         result["is_upper"] = True
                         return result
                     else:
-                        # Within the same layer, prioritize capturing the leftmost element (with a smaller X-coordinate).
                         left_box = min(id3_boxes_list, key=lambda pos: pos[0])
-                        print(f"If two ID3 values ​​are in the same layer {', upper region' if y1 < 250 else ', lower region'}, prioritize crawling the ID3 value on the left.")
+                        print(f"Two id3 on the same layer{' in upper area' if y1 < 250 else ', left area'}")
                         result["target_id"] = "id3"
-                        # Whether to go to the upper layer is set according to the actual Y-coordinate.
                         result["is_upper"] = y1 < 250
                         return result
             
             elif len(unique_id4_boxes) == 2:
-                print("Two ID4 parcel boxes")
-                
-                # Check for stacking (Y coordinate difference greater than the threshold).
+                print("two id4 boxes")
+
                 y1, y2 = id4_boxes_list[0][1], id4_boxes_list[1][1]
-                if abs(y1 - y2) > 20:  # Stacking judgment threshold
-                    # If there is stacking, prioritize grabbing the uppermost layer (those with smaller Y-coordinates).
+                if abs(y1 - y2) > 20: 
                     upper_box = id4_boxes_list[0] if y1 < y2 else id4_boxes_list[1]
-                    print(f"When two ID4s are stacked, the ID4 of the upper layer is crawled first.")
+                    print(f"Two id4 stacked, prioritize grabbing the upper id4")
                     result["target_id"] = "id4"
                     result["is_upper"] = True
                     return result
                 else:
-                    # Without stacking, use a y-coordinate threshold of 250 to determine the upper and lower layers.
-                    # The layer with a y-coordinate below 250 is the upper layer, and the layer with a y-coordinate above 250 is the lower layer.
                     y1, y2 = id4_boxes_list[0][1], id4_boxes_list[1][1]
                     
                     if y1 < 250 and y2 >= 250:
-                        # One is at the top level, and the other is at the bottom level; the one at the top level will be crawled first.
                         upper_box = id4_boxes_list[0] if y1 < y2 else id4_boxes_list[1]
-                        print(f"If two ID4 values ​​are not stacked, prioritize crawling the ID4 of the upper layer (Y coordinate = {min(y1, y2)} < 250).")
+                        print(f"Two id4 stacked, prioritize grabbing the upper id4 (Y coordinate={min(y1, y2)} < 250)")
                         result["target_id"] = "id4"
                         result["is_upper"] = True
                         return result
                     elif y2 < 250 and y1 >= 250:
-                        # One is at the top level, and the other is at the bottom level; the one at the top level will be crawled first.
                         upper_box = id4_boxes_list[1] if y2 < y1 else id4_boxes_list[0]
-                        print(f"If two ID4 values ​​are not stacked, prioritize crawling the ID4 of the upper layer (Y coordinate = {min(y1, y2)} < 250).")
+                        print(f"Two id4 stacked, prioritize grabbing the upper id4 (Y坐标={min(y1, y2)} < 250)")
                         result["target_id"] = "id4"
                         result["is_upper"] = True
                         return result
                     else:
-                        # Within the same layer, prioritize capturing the leftmost element (with a smaller X-coordinate).
                         left_box = min(id4_boxes_list, key=lambda pos: pos[0])
-                        print(f"If two ID4 values ​​are in the same layer {', upper region' if y1 < 250 else ', lower region'}, prioritize crawling the ID4 value on the left.")
+                        print(f"Two id4 on the same layer{' in upper area' if y1 < 250 else ', left area'}")
                         result["target_id"] = "id4"
-                        # Whether to go to the upper layer is set according to the actual Y-coordinate.
                         result["is_upper"] = y1 < 250
                         return result
-        
-        # 3. The situation of the three express boxes
+
         elif total_boxes == 3:
-            print("Three express boxes were detected.")
-            
-            # Collect the location information of all boxes
+            print("Three boxes")
+
             all_boxes = []
             for x, y in unique_id3_boxes:
                 all_boxes.append((3, x, y))
             for x, y in unique_id4_boxes:
                 all_boxes.append((4, x, y))
-            
-            # Sort by Y-coordinate and find the top-level box (the smaller the Y-value, the more likely it is to be on the top level).
+
             all_boxes.sort(key=lambda box: box[2])
-            
-            # There must be one side that is stacked; prioritize grabbing the boxes on the top layer.
-            upper_box = all_boxes[0]  # The box with the smallest Y-coordinate
-            is_upper = upper_box[2] < 250  # Determine whether it is truly in the upper region based on the actual Y-coordinate.
-            print(f"Prioritize grabbing the uppermost parcel box: id{upper_box[0]}, Y coordinate={upper_box[2]}, whether it is an upper region={is_upper}")
+
+            upper_box = all_boxes[0] 
+            is_upper = upper_box[2] < 250  
+            print(f"Prioritize picking up the packages on the top layer: id{upper_box[0]}，Y coordinate={upper_box[2]}，is_upper={is_upper}")
             result["target_id"] = f"id{upper_box[0]}"
             result["is_upper"] = is_upper
             return result
-        
-        # 4. The status of the four parcel boxes (two with ID3 and two with ID4)
+
         elif total_boxes == 4:
-            print("Four parcel boxes were detected (two with ID3 and two with ID4).")
-            
-            # Collect the location information of all boxes
+            print("Detected 4 courier boxes (two id3 and two id4)")
+
             all_boxes = []
             for x, y in unique_id3_boxes:
                 all_boxes.append((3, x, y))
             for x, y in unique_id4_boxes:
                 all_boxes.append((4, x, y))
-            
-            # Sort by Y-coordinate and find the top-level boxes (the two with smaller Y-coordinates).
+
             all_boxes.sort(key=lambda box: box[2])
-            upper_boxes = all_boxes[:2]  # The two boxes on the top
-            
-            # Check if all upper-level users have the same ID.
+            upper_boxes = all_boxes[:2] 
+
             upper_ids = [box[0] for box in upper_boxes]
             
             if upper_ids[0] == upper_ids[1]:
-                print(f"Both upper layers have id{upper_ids[0]}")
-                # Prioritize capturing the leftmost (smaller X-coordinate) images.
+                print(f"The upper layer on both sides is id{upper_ids[0]}")
                 upper_boxes.sort(key=lambda box: box[1])
                 target_id = f"id{upper_boxes[0][0]}"
-                # Determine whether it is truly in the upper region based on the actual Y-coordinate.
                 is_upper = upper_boxes[0][2] < 250
                 result["target_id"] = target_id
                 result["is_upper"] = is_upper
-                print(f"Prioritize fetching the upper left region {target_id}, and check if it's an upper region = {is_upper}.")
+                print(f"Prioritize grabbing the left upper layer: {target_id}，is_upper={is_upper}")
                 return result
             else:
-                print("The two upper layers have different IDs.")
-                # Prioritize crawling ID3
+                print("The upper layer on both sides is different ID")
                 for box in upper_boxes:
                     if box[0] == 3:
-                        print("Prioritize crawling the ID3 of the upper layer.")
+                        print("Pick up the upper id3")
                 result["target_id"] = "id3"
-                # Determine whether it is truly in the upper region based on the actual Y-coordinate.
                 result["is_upper"] = box[2] < 250
-                print(f"Prioritize fetching the upper-level ID3; whether it's an upper-level region = {result['is_upper']}")
+                print(f"Prioritize capturing the upper-level id3, whether it is the upper-level area={result['is_upper']}")
                 return result
-                # If the upper layer does not have ID3, fetch the first one from the upper layer.
-                # Determine whether it is truly in the upper region based on the actual Y-coordinate.
                 is_upper = upper_boxes[0][2] < 250
                 result["target_id"] = f"id{upper_boxes[0][0]}"
                 result["is_upper"] = is_upper
-                print(f"The upper layer does not have ID3. Retrieve the upper layer's ID {upper_boxes[0][0]}, and check if it's an upper-layer region = {is_upper}.")
+                print(f"The upper level does not have an id3, capture the id from the upper level: id{upper_boxes[0][0]}，is_upper={is_upper}")
                 return result
-        
-        # Default behavior: Return results based on priority.
+
         if has_id3 and has_id4:
-            print("Based on the default priority: prioritize crawling ID3.")
+            print("Prioritize grabbing the upper-level id3")
             result["target_id"] = "id3"
-            # Calculate the average Y-coordinate to determine the upper and lower layers
             id3_avg_y = sum(y for x, y in id3_positions) / len(id3_positions) if id3_positions else 0
             id4_avg_y = sum(y for x, y in id4_positions) / len(id4_positions) if id4_positions else 0
             result["is_upper"] = id3_avg_y > id4_avg_y
         elif has_id3:
-            print("Default: Only ID3 is detected, and ID3 is crawled first.")
+            print("Prioritize grabbing the upper-level id3")
             result["target_id"] = "id3"
-            # Determine whether it is on the upper layer based on the actual Y-coordinate.
+
             id3_avg_y = sum(y for x, y in id3_positions) / len(id3_positions) if id3_positions else 0
             result["is_upper"] = id3_avg_y < 250
-            print(f"The average Y-coordinate of id3 is set to {id3_avg_y}, and whether it is an upper layer is set to {result['is_upper']}.")
+            print(f"id3 average Y coordinate={id3_avg_y}，Is it upper?={result['is_upper']}")
         elif has_id4:
-            print("Default: Only id4 is detected, and id4 is crawled first.")
+            print("Prioritize grabbing the upper-level id4")
             result["target_id"] = "id4"
-            # Determine whether it is on the upper layer based on the actual Y-coordinate.
             id4_avg_y = sum(y for x, y in id4_positions) / len(id4_positions) if id4_positions else 0
             result["is_upper"] = id4_avg_y < 250
-            print(f"The average Y-coordinate of id4 is set to {id4_avg_y}, and whether it is an upper layer is set to {result['is_upper']}.")
+            print(f"id4 average Y coordinate={id4_avg_y}，Is it upper?={result['is_upper']}")
         
-        print(f"Detection results: Target ID = {result['target_id']}, Is it an upper layer = {result['is_upper']}")
+        print(f"Detection result: target ID={result['target_id']}, is_upper={result['is_upper']}")
         return result
             
     except Exception as e:
-        print(f"Error detected QR code: {str(e)}")
-        # When an error occurs, id3 is selected by default and assumed to be the upper level.
+        print(f"Error detecting QR code: {str(e)}")
         return {"target_id": "id3", "is_upper": True}
     finally:
+        close_camera()
         print("check box qrcodes done")
  
 def process_qr_data():
     """
-    The system processes QR code data and determines which target's data to return based on the existence of the package and its hierarchical relationship.
-    
-    Logical rules:
-    1. When there is only one package, directly grab the detected package.
-    2.When there are two express boxes:
-       - Given an ID3 and an ID4: prioritize crawling ID3.
-       - Two identical IDs: the one on the left is crawled first; if they are stacked, the one on the top is crawled first.
-    3. When there are three packages: one side will inevitably be stacked, so prioritize grabbing the top package.
-    4. When there are four boxes: if they are stacked on both sides, prioritize grabbing the top layer; if the same ID is on the top layer, grab the left one; if different IDs are on the top layer, prioritize ID3.
-    return:
-        If a grabbable parcel box is found: Return (_z, _ry, _perc), where _z is the depth, _ry is the pitch angle, and _perc is the normalized center point value.
-        If no parcel can be grabbed: Return -1
+    Process QR code data and determine which target's data to return based on the existence of the delivery boxes and their upper-lower relationships.
+
+    Logic rules:
+    1. When there is only one delivery box, directly grab the detected box.
+    2. When there are two delivery boxes:
+    - One is id3 and one is id4: prioritize grabbing id3.
+    - Two boxes with the same ID: prioritize grabbing the left one; if stacked, prioritize grabbing the upper one.
+    3. When there are three delivery boxes: one side must be stacked, prioritize grabbing the upper box.
+    4. When there are four delivery boxes: both sides are stacked, prioritize grabbing the upper one; if the same ID, grab the left upper one; if different IDs, prioritize id3 on the upper side.
+
+    Return:
+    If a grabbable delivery box is found: return (_z, _ry, _perc), where _z is depth, _ry is pitch angle, and _perc is the normalized center value.
+    If no grabbable delivery box is found: return -1.
     """
     global cam
     if cam is None or not cam.isOpened():
@@ -736,23 +670,19 @@ def process_qr_data():
         return -1
     
     data_ = getArucoCode(True)
-    # Check data validity
     if data_ is not None and len(data_) > 1 and data_[1] is not None:
         results, ids = data_
         
         if results == []:
-            return -1   #The marker_length of the QR code needs to be large, and the marker_length parameter must be given correctly; otherwise, there will be no pose information.
-        
-        # Create a mapping from ID to index for easy and fast lookup.
+            return -1  
+
         id_to_index = {}
         for i, marker_id in enumerate(ids):
             id_to_index[marker_id[0]] = i
-        
-        # Check if a specific ID was detected.
+
         has_id3 = 3 in id_to_index and id_to_index[3] < len(results)
         has_id4 = 4 in id_to_index and id_to_index[4] < len(results)
-        
-        # Collect all id3 and id4 tag information
+
         id3_markers = []
         id4_markers = []
         
@@ -761,24 +691,22 @@ def process_qr_data():
             if i < len(results):
                 if mid == 3:
                     x, y = results[i][6][0], results[i][6][1]
-                    id3_markers.append((i, x, y))  # (Index, X coordinate, Y coordinate)
+                    id3_markers.append((i, x, y)) 
                 elif mid == 4:
                     x, y = results[i][6][0], results[i][6][1]
-                    id4_markers.append((i, x, y))  # (Index, X coordinate, Y coordinate)
+                    id4_markers.append((i, x, y))  
         
         total_id3 = len(id3_markers)
         total_id4 = len(id4_markers)
         
-        print(f"process_qr_data: Detection results: Number of id3s = {total_id3}, Number of id4s = {total_id4}")
+        print(f"process_qr_data: Test Result: Number of id3={total_id3}, Number of id4={total_id4}")
         
-        # 1. Case with only one express box
         if total_id3 == 1 and total_id4 == 0:
             y_id3 = id3_markers[0][2]
-            # The layer with a y-coordinate below 250 is the upper layer, and the layer with a y-coordinate above 250 is the lower layer.
             if y_id3 < 250:
-                print(f"process_qr_data: There is only one id3 parcel box, with y-coordinate = {y_id3}, located in the upper area; it can be directly crawled.")
+                print(f"process_qr_data: Only one id3 express box, y-coordinate={y_id3}，In the upper area, grab directly")
             else:
-                print(f"process_qr_data: There is only one id3 parcel box, with y-coordinate = {y_id3}, located in the lower area, so it can be directly crawled.")
+                print(f"process_qr_data: Only one id3 express box, y-coordinate={y_id3}，In the lower area, grab directly")
             i = id3_markers[0][0]
             _z = results[i][2]
             _ry = results[i][4]
@@ -786,182 +714,143 @@ def process_qr_data():
             return (_z, _ry, _perc)
         elif total_id4 == 1 and total_id3 == 0:
             y_id4 = id4_markers[0][2]
-            #The layer with a y-coordinate below 250 is the upper layer, and the layer with a y-coordinate above 250 is the lower layer.
             if y_id4 < 250:
-                print(f"process_qr_data: There is only one package with ID4, y-coordinate = {y_id4}, located in the upper area; it can be directly captured.")
+                print(f"process_qr_data: Only one id4 express box, y-coordinate={y_id4}，In the upper area, grab directly")
             else:
-                print(f"process_qr_data: There is only one package with ID4, y-coordinate = {y_id4}, located in the lower area; it can be directly captured.")
+                print(f"process_qr_data: Only one id4 express box, y-coordinate={y_id4}，In the lower area, grab directly")
             i = id4_markers[0][0]
             _z = results[i][2]
             _ry = results[i][4]
             _perc = results[i][6][0]/960.0
             return (_z, _ry, _perc)
-        
-        # 2. The situation of the two express boxes
+
         elif (total_id3 + total_id4) == 2:
-            print("process_qr_data: Detected 2 express boxes")
-            
-            # 2.1 One ID3 and one ID4
+            print("process_qr_data: Detect 2 delivery boxes")
+
             if total_id3 == 1 and total_id4 == 1:
-                print("process_qr_data: One ID3 and one ID4")
-                # Check for stacking (Y coordinate difference greater than the threshold).
+                print("process_qr_data: One id3 and one id4")
                 y_id3 = id3_markers[0][2]
                 y_id4 = id4_markers[0][2]
                 
-                if abs(y_id3 - y_id4) > 20:  # Stacking judgment threshold
-                    # If there is stacking, prioritize grabbing the uppermost layer (those with smaller Y-coordinates).
+                if abs(y_id3 - y_id4) > 20: 
                     if y_id3 < y_id4:
                         i = id3_markers[0][0]
-                        print("Different IDs are stacked, with id3 on the upper layer, so id3 is crawled first.")
+                        print("process_qr_data: Different ID stacked, prioritize grabbing id3")
                     else:
                         i = id4_markers[0][0]
-                        print("Different IDs are stacked, with id4 at the top, so id4 will be crawled first.")
+                        print("process_qr_data: Different ID stacked, prioritize grabbing id4 express box")
                 else:
-                    # Without stacking, use a y-coordinate threshold of 250 to determine the upper and lower layers.
                     y_id3 = id3_markers[0][2]
                     y_id4 = id4_markers[0][2]
-                    
-                    # The layer with a y-coordinate below 250 is the upper layer, and the layer with a y-coordinate above 250 is the lower layer.
+
                     if y_id3 < 250 and y_id4 >= 250:
-                        # ID3 is in the upper layer, and ID4 is in the lower layer.
                         i = id3_markers[0][0]
-                        print("If different IDs are in the same layer, and id3 is in the upper layer area, then id3 will be crawled first.")
+                        print("process_qr_data: Same ID stacked, prioritize grabbing id3")
                     elif y_id4 < 250 and y_id3 >= 250:
-                        # ID4 is in the upper layer, and ID3 is in the lower layer.
                         i = id4_markers[0][0]
-                        print("Different IDs at the same level, id4 is in the upper level area, so id4 will be crawled first.")
+                        print("process_qr_data: Same ID stacked, prioritize grabbing id4 express box")
                     else:
-                        # If both are in the upper or lower layer, prioritize fetching ID3.
                         i = id3_markers[0][0]
-                        # Clearly distinguish areas
                         if y_id3 < 250 and y_id4 < 250:
-                            print("If different IDs are at the same level and all are in the upper area, prioritize crawling ID3.")
+                            print("process_qr_data: Same ID stacked, prioritize grabbing id3")
                         else:
-                            print("If different IDs are at the same level and all are in the lower level area, prioritize crawling ID3.")
+                            print("process_qr_data: Same ID stacked, prioritize grabbing id3")
                 
                 _z = results[i][2]
                 _ry = results[i][4]
                 _perc = results[i][6][0]/960.0
                 return (_z, _ry, _perc)
-            
-            # 2.2 Two express boxes with the same ID
+
             elif total_id3 == 2:
-                print("Two ID3 parcel boxes")
-                # Check for stacking (Y coordinate difference greater than the threshold).
+                print("Two ID3 express boxes")
                 y1, y2 = id3_markers[0][2], id3_markers[1][2]
-                if abs(y1 - y2) > 20:  # Stacking judgment threshold
-                    # If there is stacking, prioritize grabbing the uppermost layer (those with smaller Y-coordinates).
+                if abs(y1 - y2) > 20: 
                     i = id3_markers[0][0] if y1 < y2 else id3_markers[1][0]
-                    print("When two ID3s are stacked, the ID3 of the upper layer is crawled first.")
+                    print("process_qr_data: Same ID stacked, prioritize grabbing id3")
                 else:
-                    # Use the y-coordinate threshold of 250 to determine the upper and lower layers.
-                    # The layer with a y-coordinate below 250 is the upper layer, and the layer with a y-coordinate above 250 is the lower layer.
                     if y1 < 250 and y2 >= 250:
-                        # One is at the top level, and the other is at the bottom level; the top level will be crawled first.
                         i = id3_markers[0][0]
-                        print("If the two ID3s are not on the same level, prioritize crawling the ID3 of the higher level.")
+                        print("process_qr_data: Same ID stacked, prioritize grabbing id3")
                     elif y2 < 250 and y1 >= 250:
-                        # One is at the top level, and the other is at the bottom level; the top level will be crawled first.
                         i = id3_markers[1][0]
-                        print("If the two ID3s are not on the same level, prioritize crawling the ID3 of the higher level.")
+                        print("process_qr_data: Same ID stacked, prioritize grabbing id3")
                     else:
-                        # If both are on the upper layer or both are on the lower layer, prioritize capturing the one on the left (with the smaller X-coordinate).
                         x1, x2 = id3_markers[0][1], id3_markers[1][1]
                         i = id3_markers[0][0] if x1 < x2 else id3_markers[1][0]
-                        # Clearly distinguish areas
                         if y1 < 250 and y2 < 250:
-                            print("If two ID3 values ​​are on the same level and both are in the upper area, prioritize crawling the ID3 value on the left.")
+                            print("When two id3s are on the same level and both in the upper area, the left id3 is prioritized.")
                         else:
-                            print("If two ID3 values ​​are on the same level and both are in the lower area, prioritize crawling the ID3 value on the left.")
+                            print("When two id3s are on the same level and both in the lower area, the left id3 is prioritized.")
                 _z = results[i][2]
                 _ry = results[i][4]
                 _perc = results[i][6][0]/960.0
                 return (_z, _ry, _perc)
             
             elif total_id4 == 2:
-                print("Two ID4 parcel boxes")
-                # Check for stacking (Y coordinate difference greater than the threshold).
+                print("Two ID4 express boxes")
                 y1, y2 = id4_markers[0][2], id4_markers[1][2]
-                if abs(y1 - y2) > 20:  # Stacking judgment threshold
-                    # If there is stacking, prioritize grabbing the uppermost layer (those with smaller Y-coordinates).
+                if abs(y1 - y2) > 20:  
                     i = id4_markers[0][0] if y1 < y2 else id4_markers[1][0]
-                    print("When two ID4s are stacked, the one with the upper ID4 will be crawled first.")
+                    print("process_qr_data: Same ID stacked, prioritize grabbing id4 express box")
                 else:
-                    # Use the y-coordinate threshold of 250 to determine the upper and lower layers.
-                    # The layer with a y-coordinate below 250 is the upper layer, and the layer with a y-coordinate above 250 is the lower layer.
                     if y1 < 250 and y2 >= 250:
-                        # One is at the top level, and the other is at the bottom level; the top level will be crawled first.
                         i = id4_markers[0][0]
-                        print("If the two ID4s are not on the same level, prioritize crawling the ID4 on the upper level.")
+                        print("process_qr_data: Same ID stacked, prioritize grabbing id4 express box")
                     elif y2 < 250 and y1 >= 250:
-                        # One is at the top level, and the other is at the bottom level; the top level will be crawled first.
                         i = id4_markers[1][0]
-                        print("If the two ID4s are not on the same level, prioritize crawling the ID4 on the upper level.")
-                    else:
-                        # If both are on the upper layer or both are on the lower layer, prioritize capturing the one on the left (with the smaller X-coordinate).
+                        print("process_qr_data: Same ID stacked, prioritize grabbing id4 express box")
                         x1, x2 = id4_markers[0][1], id4_markers[1][1]
                         i = id4_markers[0][0] if x1 < x2 else id4_markers[1][0]
-                        # Clearly distinguish areas
                         if y1 < 250 and y2 < 250:
-                            print("If both ID4 values ​​are on the same level and both are in the upper area, prioritize crawling the ID4 value on the left.")
+                            print("When two id4s are on the same level and both in the upper area, the left id4 express box is prioritized.")
                         else:
-                            print("If both ID4 values ​​are on the same level and both are in the lower area, prioritize crawling the ID4 value on the left.")
+                            print("When two id4s are on the same level and both in the lower area, the left id4 express box is prioritized.")
                 _z = results[i][2]
                 _ry = results[i][4]
                 _perc = results[i][6][0]/960.0
                 return (_z, _ry, _perc)
-        
-        # 3. The situation of the three express boxes
+
         elif (total_id3 + total_id4) == 3:
-            print("If three packages were detected, one side must be stacked.")
+            print("Three delivery boxes were detected, and one side must be stacked.")
             
-            # Collect the location information of all boxes
             all_markers = []
             for i, x, y in id3_markers:
-                all_markers.append((i, 3, x, y))  # (Index, ID, X coordinate, Y coordinate)
+                all_markers.append((i, 3, x, y)) 
             for i, x, y in id4_markers:
                 all_markers.append((i, 4, x, y))
-            
-            # Sort by Y-coordinate and find the top-level box (the smaller the Y-value, the more likely it is to be on the top level).
+
             all_markers.sort(key=lambda m: m[3])
-            
-            # Prioritize grabbing the upper-layer parcel boxes
+
             upper_marker = all_markers[0]
             i = upper_marker[0]
-            print(f"Prioritize fetching the upper-level parcel boxes: id{upper_marker[1]}")
+            print(f"Prioritize picking up the top-layer courier boxes: id{upper_marker[1]}")
             _z = results[i][2]
             _ry = results[i][4]
             _perc = results[i][6][0]/960.0
             return (_z, _ry, _perc)
-        
-        # 4. The status of the four parcel boxes (two with ID3 and two with ID4)
+
         elif (total_id3 + total_id4) == 4 and total_id3 == 2 and total_id4 == 2:
-            print("Four parcel boxes were detected, stacked on both sides.")
-            
-            # Collect the location information of all boxes
+            print("Four delivery boxes were detected, and both sides must be stacked.")
+
             all_markers = []
             for i, x, y in id3_markers:
-                all_markers.append((i, 3, x, y))  # (index, ID, X coordinate, Y coordinate)
+                all_markers.append((i, 3, x, y)) 
             for i, x, y in id4_markers:
                 all_markers.append((i, 4, x, y))
-            
-            # Sort by Y-coordinate and find the top-level boxes (the two with smaller Y-coordinates).
+
             all_markers.sort(key=lambda m: m[3])
-            upper_markers = all_markers[:2]  # The two boxes on the top
-            
-            # Check if all upper-level users have the same ID.
+            upper_markers = all_markers[:2]  
+
             upper_ids = [m[1] for m in upper_markers]
             
             if upper_ids[0] == upper_ids[1]:
-                print(f"Both upper layers have id{upper_ids[0]}")
-                # Prioritize capturing the leftmost (smaller X-coordinate) images.
+                print(f"Both sides are upper layer id{upper_ids[0]}")
                 upper_markers.sort(key=lambda m: m[2])
                 target_marker = upper_markers[0]
                 i = target_marker[0]
-                print(f"Prioritize crawling the top left-hand top-level ID {target_marker[1]}")
+                print(f"Prioritize picking up the left upper-layer courier box: id{target_marker[1]}")
             else:
-                print("The two upper layers have different IDs.")
-                # Prioritize crawling ID3
+                print("Both sides are upper layer different ID")
                 target_marker = None
                 for m in upper_markers:
                     if m[1] == 3:
@@ -970,39 +859,35 @@ def process_qr_data():
                 
                 if target_marker:
                     i = target_marker[0]
-                    print("Prioritize crawling the ID3 of the upper layer.")
+                    print("Prioritize grabbing the upper-level id3")
                 else:
-                    # If the upper layer does not have ID3, fetch the first one from the upper layer.
                     i = upper_markers[0][0]
-                    print(f"The upper layer does not have id3, so retrieve the upper layer's id.{upper_markers[0][1]}")
+                    print(f"The upper layer does not have an id3, capture the id from the upper layer{upper_markers[0][1]}")
             
             _z = results[i][2]
             _ry = results[i][4]
             _perc = results[i][6][0]/960.0
             return (_z, _ry, _perc)
-        
-        # Default: Return results based on priority
+
         if has_id3:
-            print("Default priority: Fetch ID3 first")
+            print("Prioritize grabbing the upper-level id3")
             i = id3_markers[0][0]
             _z = results[i][2]
             _ry = results[i][4]
             _perc = results[i][6][0]/960.0
             return (_z, _ry, _perc)
         elif has_id4:
-            print("Default priority: Fetch ID4 first")
+            print("Prioritize grabbing the upper-level id4")
             i = id4_markers[0][0]
             _z = results[i][2]
             _ry = results[i][4]
             _perc = results[i][6][0]/960.0
             return (_z, _ry, _perc)
-        
-        # If no parcel can be grabbed, return -1
-        print("No grabbable parcel boxes were detected.")
+
+        print("No valid delivery boxes detected.")
         return -1
     
-    # No markers detected
-    print("No markers detected")
+    print("No markers detected.")
     return -1
 
 def process_qr_data_2():
@@ -1010,16 +895,16 @@ def process_qr_data_2():
     
     data_ = getArucoCode(True)
     # print("data_",data_)
-    # example：data_ ([[13.190542591653859, 0.6577785493956305, 30.57489950772101, 56.677235927555834, -10.703176777425517, -17.524720968623765, (892, 292)]], array([[2]], dtype=int32))
+    # data_ ([[13.190542591653859, 0.6577785493956305, 30.57489950772101, 56.677235927555834, -10.703176777425517, -17.524720968623765, (892, 292)]], array([[2]], dtype=int32))
     
     if data_ is not None:
         if data_[0] == []:
-            return -1   #The marker_length of the QR code needs to be large, and the marker_length parameter must be given correctly; otherwise, there will be no pose information.
+            return -1   
 
         _z = data_[0][0][2]
         _ry = data_[0][0][4]
-        _perc = data_[0][0][6][0]/960.0 # Normalized [0,1], (892, 292) are the coordinates of the center point of the QR code.
-        return (_z, _ry, _perc) # Returns the center point of depth z, pitch, and screen resolution (960).
+        _perc = data_[0][0][6][0]/960.0 
+        return (_z, _ry, _perc) 
     else:
         return -1
 def process_qr_data_simple():

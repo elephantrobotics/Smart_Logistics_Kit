@@ -19,8 +19,8 @@ class CameraProcessor:
                  dist_matrix=np.array([0.095135, -0.109279, -0.002513, -0.002433, 0.000000], dtype=np.float32),
                  marker_length=0.04):
         
-        self.frame_queue_capture = queue.Queue(maxsize=2)  # For capturing frames
-        self.frame_queue_process = queue.Queue(maxsize=2)  # For processing frames
+        self.frame_queue_capture = queue.Queue(maxsize=2)  
+        self.frame_queue_process = queue.Queue(maxsize=2)  
 
         # Initialize pose data (translation, rotation, and position)
         self.pose_data = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, (0.0, 0.0)]
@@ -36,7 +36,7 @@ class CameraProcessor:
         self.R_flip[1, 1] = -1.0
         self.R_flip[2, 2] = -1.0
 
-        self.loop_mode = True  # Loop running by default
+        self.loop_mode = True  
 
         # ocr 
         # logging.getLogger('ppocr').setLevel(logging.WARNING)
@@ -47,7 +47,6 @@ class CameraProcessor:
         # self.time_out=30
         # self.start_time=time.time()
 
-    # GStreamer pipeline function
     @staticmethod
     def gstreamer_pipeline(sensor_id=0, capture_width=3264, capture_height=2464, display_width=960, display_height=540, framerate=21, flip_method=2):
         return (
@@ -159,7 +158,7 @@ class CameraProcessor:
             ret_val, frame = cap.read()
             if ret_val:
                 if self.frame_queue_capture.full():
-                    self.frame_queue_capture.get()  # Discard the oldest frame in the queue
+                    self.frame_queue_capture.get()  
                 self.frame_queue_capture.put(frame)
 
     def process_frames(self):
@@ -167,7 +166,7 @@ class CameraProcessor:
             if not self.frame_queue_capture.empty():
                 frame = self.frame_queue_capture.get()
 
-                gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)  # Convert to grayscale
+                gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)  
 
                 aruco_dict = cv2.aruco.getPredefinedDictionary(aruco.DICT_6X6_250)
                 parameters = cv2.aruco.DetectorParameters()
@@ -179,13 +178,11 @@ class CameraProcessor:
                     for i in range(ids_len):
                         self._detect(corners[i:i + 1], ids[i][0], frame)
              
-                # Put processed image into processing queue
                 if not self.frame_queue_process.full():
                     self.frame_queue_process.put(frame)
 
-            # Check if user closes window
             keyCode = cv2.waitKey(1) & 0xFF
-            if keyCode == 27 or keyCode == ord('q'):  # Press ESC or 'q' to exit
+            if keyCode == 27 or keyCode == ord('q'):  
                 break
 
         cv2.destroyAllWindows()
@@ -198,15 +195,15 @@ class CameraProcessor:
                 cv2.imshow(window_title, frame)
              
                 keyCode = cv2.waitKey(1) & 0xFF
-                if keyCode == 27 or keyCode == ord('q'):  # Press ESC or 'q' to exit
+                if keyCode == 27 or keyCode == ord('q'): 
                     break
    
     def process_aruco_realtime(self):
         if self.video_capture.isOpened():
-            self.running = True  # Ensure program is running
-            capture_thread = threading.Thread(target=self.capture_frames, args=(self.video_capture,)) #Thread 1: Get latest data frame, discard oldest frame in queue
-            process_thread = threading.Thread(target=self.process_frames) #Thread 2: Process Aruco code based on latest data frame, get pose and center pixel coordinate data
-            display_thread = threading.Thread(target=self.display_processed_frames, args=(self.frame_queue_process,)) # Thread 3: Display processed data frame (OpenCV visualization)
+            self.running = True  
+            capture_thread = threading.Thread(target=self.capture_frames, args=(self.video_capture,)) 
+            process_thread = threading.Thread(target=self.process_frames) 
+            display_thread = threading.Thread(target=self.display_processed_frames, args=(self.frame_queue_process,)) 
             try:
                 capture_thread.start()
                 process_thread.start()
@@ -215,15 +212,12 @@ class CameraProcessor:
                 display_thread.join()
                 process_thread.join()
                 display_thread.join()
-                # # Use a loop to check Ctrl+C instead of joining() to avoid blocking.
-                # while self.running:
-                #     time.sleep(0.1)  # Avoid CPU overload
 
             except KeyboardInterrupt:
                 print("\nKeyboardInterrupt detected. Stopping threads...")
 
             finally:
-                self.running = False  # Ensure all threads exit
+                self.running = False  
                 self.stop_IMX219_video_capture()
                 cv2.destroyAllWindows()
                 print("Camera released and program exited.")
@@ -231,50 +225,12 @@ class CameraProcessor:
             print("Error: Unable to open camera")
 
     def stop_aruco_realtime(self):
-        self.running = False  # Ensure all threads exit
+        self.running = False 
         self.stop_IMX219_video_capture()
         cv2.destroyAllWindows()
         print("Camera released and program exited.")
-
-    # def process_ocr_frame(self, raw_frame):
-    #     result = self.ocr.ocr(raw_frame, cls=True)
-    #     if result!=[None]:
-    #         for line in result:
-    #             for word_info in line:
-    #                 text = word_info[1][0]
-    #                 confidence = word_info[1][1]
-                    
-    #                 box = word_info[0]
-    #                 cv2.polylines(raw_frame, [np.array(box).astype(np.int32)], isClosed=True, color=(0, 255, 0), thickness=2)
-    #                 pil_image = Image.fromarray(raw_frame)
-    #                 draw = ImageDraw.Draw(pil_image)
-
-    #                 bbox = draw.textbbox((0, 0), text, font=self.font)  
-    #                 box_x0, box_y0, box_x1, box_y1 = bbox  
-    #                 text_width = box_x1 - box_x0
-    #                 text_height = box_y1 - box_y0
-
-    #                 center_x = (box[0][0] + box[2][0]) / 2
-    #                 center_y = (box[0][1] + box[2][1]) / 2
-    #                 text_x = center_x - text_width / 2
-    #                 text_y = center_y - text_height / 2
-
-    #                 draw.text((text_x, text_y), text, font=self.font, fill=self.text_color)
-                 
-    #                 char_frame = np.array(pil_image)
-
-    #                 return [char_frame,text]
 
 if __name__ == "__main__":
     camera_processor = CameraProcessor()
     camera_processor.start_imx219_video_capture()
     camera_processor.process_aruco_realtime()
-
-    # while True:
-    #     z, ry, perc = camera_processor.get_aruco_realtime_date()
-    #     print(f"Real-time data - z: {z}, ry: {ry}, perc:{perc}")
-    #     keyCode = cv2.waitKey(1) & 0xFF
-    #     if keyCode == 27 or keyCode == ord('q'):  # Press ESC or 'q' to exit
-    #         break
-    
-    # camera_processor.stop_aruco_realtime()
