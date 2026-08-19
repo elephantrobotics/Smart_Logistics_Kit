@@ -198,7 +198,7 @@ def _detect(corners, ids, imgWithAruco):
                         cv2.LINE_AA)
             if ids is not None:   # if aruco marker detected
                 try:
-                    current_marker_length = 0.03 if ids[0] in [3, 4] else 0.04
+                    current_marker_length = 0.03 if ids[0] in [2, 3] else 0.04
                     rvec, tvec, _ = cv2.aruco.estimatePoseSingleMarkers(corners, current_marker_length, camera_matrix, dist_coeffs)
                     for i in range(rvec.shape[0]):
                         imgWithAruco = cv2.drawFrameAxes(imgWithAruco, camera_matrix, dist_coeffs, rvec, tvec, current_marker_length)
@@ -231,9 +231,15 @@ def _detect(corners, ids, imgWithAruco):
                     pitch_deg = math.degrees(pitch_marker)
                     yaw_deg = math.degrees(yaw_marker)
 
-                    if abs(yaw_deg) % 90.0 < 30:
+                    # print(f"DEBUG _detect: ID={ids[0]}, yaw={yaw_deg:.1f}, pitch={pitch_deg:.1f}, roll={roll_deg:.1f}, dist_to_90={min(abs(yaw_deg) % 90.0, 90.0 - (abs(yaw_deg) % 90.0)):.1f}")
+                    _remainder = abs(yaw_deg) % 90.0
+                    _dist_to_nearest_90 = min(_remainder, 90.0 - _remainder)
+                    if _dist_to_nearest_90 < 30:
                         return [tvec[0] * 100, tvec[1] * 100, tvec[2] * 100, roll_deg, pitch_deg, yaw_deg, cornerMid]
-                except Exception:
+                    # else:
+                    #     print(f"DEBUG _detect: ID={ids[0]} REJECTED by yaw filter (dist_to_90={_dist_to_nearest_90:.1f} >= 30)")
+                except Exception as e:
+                    # print(f"DEBUG _detect: ID={ids}, EXCEPTION: {e}")
                     pass
         except Exception:
             pass
@@ -296,6 +302,7 @@ def getArucoCode(display_mode = True ):
                             pass  
                     if display_mode and frame_makers is not None:
                         displayFrame(frame_makers)
+                # print(f"DEBUG getArucoCode: detected_ids={ids}, passed_detect={len(res)}")
                 return (res, ids)
             except Exception:
                 if display_mode:
@@ -313,7 +320,7 @@ def getArucoCode(display_mode = True ):
     finally:
         print("getArucoCode done")
 def check_box_qrcodes():
-    """Check for delivery boxes by detecting the id3 and id4 QR codes, and identify the stacking relationship and left-right positions"""
+    """Check for delivery boxes by detecting the id2 and id3 QR codes, and identify the stacking relationship and left-right positions"""
     global cam
     print("Start checking box QR codes...")
     if not init_camera():
@@ -327,11 +334,11 @@ def check_box_qrcodes():
         detect_count = 0
         max_detect_count = 10
         
+        id2_detected_times = 0
         id3_detected_times = 0
-        id4_detected_times = 0
 
-        id3_positions = [] 
-        id4_positions = []  
+        id2_positions = [] 
+        id3_positions = []  
 
         all_markers_data = []
         
@@ -365,14 +372,14 @@ def check_box_qrcodes():
                             "y": center_y
                         })
                         
-                        if detected_id[0] == 3:
+                        if detected_id[0] == 2:
+                            id2_detected_times += 1
+                            id2_positions.append((center_x, center_y))
+                            print(f"ID2 detected (The{detect_count+1}th detection)，X coordinate: {center_x}，Y coordinate: {center_y}",flush=True)
+                        elif detected_id[0] == 3:
                             id3_detected_times += 1
                             id3_positions.append((center_x, center_y))
                             print(f"ID3 detected (The{detect_count+1}th detection)，X coordinate: {center_x}，Y coordinate: {center_y}",flush=True)
-                        elif detected_id[0] == 4:
-                            id4_detected_times += 1
-                            id4_positions.append((center_x, center_y))
-                            print(f"ID4 detected (The{detect_count+1}th detection)，X coordinate: {center_x}，Y coordinate: {center_y}",flush=True)
             
             # Save frame data
             if frame_markers:
@@ -385,22 +392,31 @@ def check_box_qrcodes():
             time.sleep(0.3)
         
         # Detection results
-        print(f"Detection completed. id3 detected {id3_detected_times} times, id4 detected {id4_detected_times} times")
+        print(f"Detection completed. id2 detected {id2_detected_times} times, id3 detected {id3_detected_times} times")
         
         # Set detection threshold to 3 times
         min_detection_threshold = 3
         
-        # Check if delivery boxes are detected by id3 and id4 QR codes
+        # Check if delivery boxes are detected by id2 and id3 QR codes
+        has_id2 = id2_detected_times >= min_detection_threshold
         has_id3 = id3_detected_times >= min_detection_threshold
-        has_id4 = id4_detected_times >= min_detection_threshold
 
         result = {"target_id": None, "is_upper": False}
         
         # Count unique delivery boxes
+        unique_id2_boxes = set()
         unique_id3_boxes = set()
-        unique_id4_boxes = set()
         
         # Check if the boxes are the same based on X/Y coordinates (allow 10 pixel error)
+        for x, y in id2_positions:
+            found = False
+            for box_x, box_y in list(unique_id2_boxes):
+                if abs(x - box_x) < 10 and abs(y - box_y) < 10:
+                    found = True
+                    break
+            if not found:
+                unique_id2_boxes.add((x, y))
+        
         for x, y in id3_positions:
             found = False
             for box_x, box_y in list(unique_id3_boxes):
@@ -410,21 +426,12 @@ def check_box_qrcodes():
             if not found:
                 unique_id3_boxes.add((x, y))
         
-        for x, y in id4_positions:
-            found = False
-            for box_x, box_y in list(unique_id4_boxes):
-                if abs(x - box_x) < 10 and abs(y - box_y) < 10:
-                    found = True
-                    break
-            if not found:
-                unique_id4_boxes.add((x, y))
-        
         # Convert set to list for further processing
+        id2_boxes_list = list(unique_id2_boxes)
         id3_boxes_list = list(unique_id3_boxes)
-        id4_boxes_list = list(unique_id4_boxes)
         
-        total_boxes = len(unique_id3_boxes) + len(unique_id4_boxes)
-        print(f"actually detected {len(unique_id3_boxes)} id3 boxes and {len(unique_id4_boxes)} id4 boxes")
+        total_boxes = len(unique_id2_boxes) + len(unique_id3_boxes)
+        print(f"actually detected {len(unique_id2_boxes)} id2 boxes and {len(unique_id3_boxes)} id3 boxes")
         
         # Check if any delivery box is detected
         if total_boxes == 0:
@@ -432,9 +439,20 @@ def check_box_qrcodes():
             return result
         
         # 1. one delivery box case
-        if len(unique_id3_boxes) == 1 and len(unique_id4_boxes) == 0:
-            id3_y = id3_boxes_list[0][1]
+        if len(unique_id2_boxes) == 1 and len(unique_id3_boxes) == 0:
+            id2_y = id2_boxes_list[0][1]
             # y coordinate -<250 is upper, 250 is
+            is_upper_id2 = id2_y < 250
+            if is_upper_id2:
+                print(f"only one id2 box detected, y coordinate={id2_y}，In the upper area, grab directly")
+            else:
+                print(f"only one id2 box detected, y coordinate={id2_y}，In the lower area, grab directly")
+            result["target_id"] = "id2"
+            result["is_upper"] = is_upper_id2
+            return result
+        elif len(unique_id3_boxes) == 1 and len(unique_id2_boxes) == 0:
+            id3_y = id3_boxes_list[0][1]
+            # y coordinate -<250 is upper, 250 is lower
             is_upper_id3 = id3_y < 250
             if is_upper_id3:
                 print(f"only one id3 box detected, y coordinate={id3_y}，In the upper area, grab directly")
@@ -443,61 +461,82 @@ def check_box_qrcodes():
             result["target_id"] = "id3"
             result["is_upper"] = is_upper_id3
             return result
-        elif len(unique_id4_boxes) == 1 and len(unique_id3_boxes) == 0:
-            id4_y = id4_boxes_list[0][1]
-            # y coordinate -<250 is upper, 250 is lower
-            is_upper_id4 = id4_y < 250
-            if is_upper_id4:
-                print(f"only one id4 box detected, y coordinate={id4_y}，In the upper area, grab directly")
-            else:
-                print(f"only one id4 box detected, y coordinate={id4_y}，In the lower area, grab directly")
-            result["target_id"] = "id4"
-            result["is_upper"] = is_upper_id4
-            return result
         
         # 2. two delivery boxes case
         elif total_boxes == 2:
             print("detect 2 delivery boxes")
             
-            # 2.1: one id3 and one id4 case
-            if len(unique_id3_boxes) == 1 and len(unique_id4_boxes) == 1:
-                print("one id3 and one id4")
+            # 2.1: one id2 and one id3 case
+            if len(unique_id2_boxes) == 1 and len(unique_id3_boxes) == 1:
+                print("one id2 and one id3")
 
+                id2_x, id2_y = id2_boxes_list[0]
                 id3_x, id3_y = id3_boxes_list[0]
-                id4_x, id4_y = id4_boxes_list[0]
 
-                if abs(id3_y - id4_y) > 20: 
-                    if id3_y < id4_y:
+                if abs(id2_y - id3_y) > 20: 
+                    if id2_y < id3_y:
+                        result["target_id"] = "id2"
+                        result["is_upper"] = True
+                        print(f"overlap detected, id2 is upper ({id2_y} < {id3_y})，grab id2")
+                    else:
                         result["target_id"] = "id3"
                         result["is_upper"] = True
-                        print(f"overlap detected, id3 is upper ({id3_y} < {id4_y})，grab id3")
-                    else:
-                        result["target_id"] = "id4"
-                        result["is_upper"] = True
-                        print(f"overlap detected, id4 is upper ({id4_y} < {id3_y})，grab id4")
+                        print(f"overlap detected, id3 is upper ({id3_y} < {id2_y})，grab id3")
                 else:
+                    id2_x, id2_y = id2_boxes_list[0]
                     id3_x, id3_y = id3_boxes_list[0]
-                    id4_x, id4_y = id4_boxes_list[0]
-                    if id3_y < 250 and id4_y >= 250:
+                    if id2_y < 250 and id3_y >= 250:
+                        result["target_id"] = "id2"
+                        result["is_upper"] = True
+                        print(f"id2 in upper area ({id2_y} < 250)，grab id2")
+                    elif id3_y < 250 and id2_y >= 250:
                         result["target_id"] = "id3"
                         result["is_upper"] = True
                         print(f"id3 in upper area ({id3_y} < 250)，grab id3")
-                    elif id4_y < 250 and id3_y >= 250:
-                        result["target_id"] = "id4"
-                        result["is_upper"] = True
-                        print(f"id4 in upper area ({id4_y} < 250)，grab id4")
                     else:
-                        result["target_id"] = "id3"
-                        if id3_y < 250 and id4_y < 250:
+                        result["target_id"] = "id2"
+                        if id2_y < 250 and id3_y < 250:
                             result["is_upper"] = True
-                            print(f"Different IDs on the same layer and both in the upper area, prioritize capturing id3")
+                            print(f"Different IDs on the same layer and both in the upper area, prioritize capturing id2")
                         else:
                             result["is_upper"] = False
-                            print(f"Different IDs on the same layer and both in the lower area, prioritize capturing id3")
+                            print(f"Different IDs on the same layer and both in the lower area, prioritize capturing id2")
                 
-                print(f"id3 position: ({id3_x}, {id3_y}), id4 position: ({id4_x}, {id4_y})")
+                print(f"id2 position: ({id2_x}, {id2_y}), id3 position: ({id3_x}, {id3_y})")
                 return result
 
+            elif len(unique_id2_boxes) == 2:
+                print("two id2 boxes")
+
+                y1, y2 = id2_boxes_list[0][1], id2_boxes_list[1][1]
+                if abs(y1 - y2) > 20: 
+                    upper_box = id2_boxes_list[0] if y1 < y2 else id2_boxes_list[1]
+                    print(f"Two id2 stacked, prioritize grabbing the upper id2")
+                    result["target_id"] = "id2"
+                    result["is_upper"] = True
+                    return result
+                else:
+                    y1, y2 = id2_boxes_list[0][1], id2_boxes_list[1][1]
+                    
+                    if y1 < 250 and y2 >= 250:
+                        upper_box = id2_boxes_list[0] if y1 < y2 else id2_boxes_list[1]
+                        print(f"Two id2 stacked, prioritize grabbing the upper id2 (Y coordinate={min(y1, y2)} < 250)")
+                        result["target_id"] = "id2"
+                        result["is_upper"] = True
+                        return result
+                    elif y2 < 250 and y1 >= 250:
+                        upper_box = id2_boxes_list[1] if y2 < y1 else id2_boxes_list[0]
+                        print(f"Two id2 stacked, prioritize grabbing the upper id2 (Y coordinate={min(y1, y2)} < 250)")
+                        result["target_id"] = "id2"
+                        result["is_upper"] = True
+                        return result
+                    else:
+                        left_box = min(id2_boxes_list, key=lambda pos: pos[0])
+                        print(f"Two id2 on the same layer{' in upper area' if y1 < 250 else ', left area'}")
+                        result["target_id"] = "id2"
+                        result["is_upper"] = y1 < 250
+                        return result
+            
             elif len(unique_id3_boxes) == 2:
                 print("two id3 boxes")
 
@@ -519,7 +558,7 @@ def check_box_qrcodes():
                         return result
                     elif y2 < 250 and y1 >= 250:
                         upper_box = id3_boxes_list[1] if y2 < y1 else id3_boxes_list[0]
-                        print(f"Two id3 stacked, prioritize grabbing the upper id3 (Y coordinate={min(y1, y2)} < 250)")
+                        print(f"Two id3 stacked, prioritize grabbing the upper id3 (Y坐标={min(y1, y2)} < 250)")
                         result["target_id"] = "id3"
                         result["is_upper"] = True
                         return result
@@ -529,47 +568,15 @@ def check_box_qrcodes():
                         result["target_id"] = "id3"
                         result["is_upper"] = y1 < 250
                         return result
-            
-            elif len(unique_id4_boxes) == 2:
-                print("two id4 boxes")
-
-                y1, y2 = id4_boxes_list[0][1], id4_boxes_list[1][1]
-                if abs(y1 - y2) > 20: 
-                    upper_box = id4_boxes_list[0] if y1 < y2 else id4_boxes_list[1]
-                    print(f"Two id4 stacked, prioritize grabbing the upper id4")
-                    result["target_id"] = "id4"
-                    result["is_upper"] = True
-                    return result
-                else:
-                    y1, y2 = id4_boxes_list[0][1], id4_boxes_list[1][1]
-                    
-                    if y1 < 250 and y2 >= 250:
-                        upper_box = id4_boxes_list[0] if y1 < y2 else id4_boxes_list[1]
-                        print(f"Two id4 stacked, prioritize grabbing the upper id4 (Y coordinate={min(y1, y2)} < 250)")
-                        result["target_id"] = "id4"
-                        result["is_upper"] = True
-                        return result
-                    elif y2 < 250 and y1 >= 250:
-                        upper_box = id4_boxes_list[1] if y2 < y1 else id4_boxes_list[0]
-                        print(f"Two id4 stacked, prioritize grabbing the upper id4 (Y坐标={min(y1, y2)} < 250)")
-                        result["target_id"] = "id4"
-                        result["is_upper"] = True
-                        return result
-                    else:
-                        left_box = min(id4_boxes_list, key=lambda pos: pos[0])
-                        print(f"Two id4 on the same layer{' in upper area' if y1 < 250 else ', left area'}")
-                        result["target_id"] = "id4"
-                        result["is_upper"] = y1 < 250
-                        return result
 
         elif total_boxes == 3:
             print("Three boxes")
 
             all_boxes = []
+            for x, y in unique_id2_boxes:
+                all_boxes.append((2, x, y))
             for x, y in unique_id3_boxes:
                 all_boxes.append((3, x, y))
-            for x, y in unique_id4_boxes:
-                all_boxes.append((4, x, y))
 
             all_boxes.sort(key=lambda box: box[2])
 
@@ -581,13 +588,13 @@ def check_box_qrcodes():
             return result
 
         elif total_boxes == 4:
-            print("Detected 4 courier boxes (two id3 and two id4)")
+            print("Detected 4 courier boxes (two id2 and two id3)")
 
             all_boxes = []
+            for x, y in unique_id2_boxes:
+                all_boxes.append((2, x, y))
             for x, y in unique_id3_boxes:
                 all_boxes.append((3, x, y))
-            for x, y in unique_id4_boxes:
-                all_boxes.append((4, x, y))
 
             all_boxes.sort(key=lambda box: box[2])
             upper_boxes = all_boxes[:2] 
@@ -606,44 +613,44 @@ def check_box_qrcodes():
             else:
                 print("The upper layer on both sides is different ID")
                 for box in upper_boxes:
-                    if box[0] == 3:
-                        print("Pick up the upper id3")
-                result["target_id"] = "id3"
+                    if box[0] == 2:
+                        print("Pick up the upper id2")
+                result["target_id"] = "id2"
                 result["is_upper"] = box[2] < 250
-                print(f"Prioritize capturing the upper-level id3, whether it is the upper-level area={result['is_upper']}")
+                print(f"Prioritize capturing the upper-level id2, whether it is the upper-level area={result['is_upper']}")
                 return result
                 is_upper = upper_boxes[0][2] < 250
                 result["target_id"] = f"id{upper_boxes[0][0]}"
                 result["is_upper"] = is_upper
-                print(f"The upper level does not have an id3, capture the id from the upper level: id{upper_boxes[0][0]}，is_upper={is_upper}")
+                print(f"The upper level does not have an id2, capture the id from the upper level: id{upper_boxes[0][0]}，is_upper={is_upper}")
                 return result
 
-        if has_id3 and has_id4:
-            print("Prioritize grabbing the upper-level id3")
-            result["target_id"] = "id3"
+        if has_id2 and has_id3:
+            print("Prioritize grabbing the upper-level id2")
+            result["target_id"] = "id2"
+            id2_avg_y = sum(y for x, y in id2_positions) / len(id2_positions) if id2_positions else 0
             id3_avg_y = sum(y for x, y in id3_positions) / len(id3_positions) if id3_positions else 0
-            id4_avg_y = sum(y for x, y in id4_positions) / len(id4_positions) if id4_positions else 0
-            result["is_upper"] = id3_avg_y > id4_avg_y
+            result["is_upper"] = id2_avg_y > id3_avg_y
+        elif has_id2:
+            print("Prioritize grabbing the upper-level id2")
+            result["target_id"] = "id2"
+
+            id2_avg_y = sum(y for x, y in id2_positions) / len(id2_positions) if id2_positions else 0
+            result["is_upper"] = id2_avg_y < 250
+            print(f"id2 average Y coordinate={id2_avg_y}，Is it upper?={result['is_upper']}")
         elif has_id3:
             print("Prioritize grabbing the upper-level id3")
             result["target_id"] = "id3"
-
             id3_avg_y = sum(y for x, y in id3_positions) / len(id3_positions) if id3_positions else 0
             result["is_upper"] = id3_avg_y < 250
             print(f"id3 average Y coordinate={id3_avg_y}，Is it upper?={result['is_upper']}")
-        elif has_id4:
-            print("Prioritize grabbing the upper-level id4")
-            result["target_id"] = "id4"
-            id4_avg_y = sum(y for x, y in id4_positions) / len(id4_positions) if id4_positions else 0
-            result["is_upper"] = id4_avg_y < 250
-            print(f"id4 average Y coordinate={id4_avg_y}，Is it upper?={result['is_upper']}")
         
         print(f"Detection result: target ID={result['target_id']}, is_upper={result['is_upper']}")
         return result
             
     except Exception as e:
         print(f"Error detecting QR code: {str(e)}")
-        return {"target_id": "id3", "is_upper": True}
+        return {"target_id": "id2", "is_upper": True}
     finally:
         close_camera()
         print("check box qrcodes done")
@@ -655,10 +662,10 @@ def process_qr_data():
     Logic rules:
     1. When there is only one delivery box, directly grab the detected box.
     2. When there are two delivery boxes:
-    - One is id3 and one is id4: prioritize grabbing id3.
+    - One is id2 and one is id3: prioritize grabbing id2.
     - Two boxes with the same ID: prioritize grabbing the left one; if stacked, prioritize grabbing the upper one.
     3. When there are three delivery boxes: one side must be stacked, prioritize grabbing the upper box.
-    4. When there are four delivery boxes: both sides are stacked, prioritize grabbing the upper one; if the same ID, grab the left upper one; if different IDs, prioritize id3 on the upper side.
+    4. When there are four delivery boxes: both sides are stacked, prioritize grabbing the upper one; if the same ID, grab the left upper one; if different IDs, prioritize id2 on the upper side.
 
     Return:
     If a grabbable delivery box is found: return (_z, _ry, _perc), where _z is depth, _ry is pitch angle, and _perc is the normalized center value.
@@ -680,28 +687,39 @@ def process_qr_data():
         for i, marker_id in enumerate(ids):
             id_to_index[marker_id[0]] = i
 
+        has_id2 = 2 in id_to_index and id_to_index[2] < len(results)
         has_id3 = 3 in id_to_index and id_to_index[3] < len(results)
-        has_id4 = 4 in id_to_index and id_to_index[4] < len(results)
 
+        id2_markers = []
         id3_markers = []
-        id4_markers = []
         
         for i, marker_id in enumerate(ids):
             mid = marker_id[0]
             if i < len(results):
-                if mid == 3:
+                if mid == 2:
                     x, y = results[i][6][0], results[i][6][1]
-                    id3_markers.append((i, x, y)) 
-                elif mid == 4:
+                    id2_markers.append((i, x, y)) 
+                elif mid == 3:
                     x, y = results[i][6][0], results[i][6][1]
-                    id4_markers.append((i, x, y))  
+                    id3_markers.append((i, x, y))  
         
+        total_id2 = len(id2_markers)
         total_id3 = len(id3_markers)
-        total_id4 = len(id4_markers)
         
-        print(f"process_qr_data: Test Result: Number of id3={total_id3}, Number of id4={total_id4}")
+        print(f"process_qr_data: Test Result: Number of id2={total_id2}, Number of id3={total_id3}")
         
-        if total_id3 == 1 and total_id4 == 0:
+        if total_id2 == 1 and total_id3 == 0:
+            y_id2 = id2_markers[0][2]
+            if y_id2 < 250:
+                print(f"process_qr_data: Only one id2 express box, y-coordinate={y_id2}，In the upper area, grab directly")
+            else:
+                print(f"process_qr_data: Only one id2 express box, y-coordinate={y_id2}，In the lower area, grab directly")
+            i = id2_markers[0][0]
+            _z = results[i][2]
+            _ry = results[i][4]
+            _perc = results[i][6][0]/960.0
+            return (_z, _ry, _perc)
+        elif total_id3 == 1 and total_id2 == 0:
             y_id3 = id3_markers[0][2]
             if y_id3 < 250:
                 print(f"process_qr_data: Only one id3 express box, y-coordinate={y_id3}，In the upper area, grab directly")
@@ -712,112 +730,101 @@ def process_qr_data():
             _ry = results[i][4]
             _perc = results[i][6][0]/960.0
             return (_z, _ry, _perc)
-        elif total_id4 == 1 and total_id3 == 0:
-            y_id4 = id4_markers[0][2]
-            if y_id4 < 250:
-                print(f"process_qr_data: Only one id4 express box, y-coordinate={y_id4}，In the upper area, grab directly")
-            else:
-                print(f"process_qr_data: Only one id4 express box, y-coordinate={y_id4}，In the lower area, grab directly")
-            i = id4_markers[0][0]
-            _z = results[i][2]
-            _ry = results[i][4]
-            _perc = results[i][6][0]/960.0
-            return (_z, _ry, _perc)
 
-        elif (total_id3 + total_id4) == 2:
+        elif (total_id2 + total_id3) == 2:
             print("process_qr_data: Detect 2 delivery boxes")
 
-            if total_id3 == 1 and total_id4 == 1:
-                print("process_qr_data: One id3 and one id4")
+            if total_id2 == 1 and total_id3 == 1:
+                print("process_qr_data: One id2 and one id3")
+                y_id2 = id2_markers[0][2]
                 y_id3 = id3_markers[0][2]
-                y_id4 = id4_markers[0][2]
                 
-                if abs(y_id3 - y_id4) > 20: 
-                    if y_id3 < y_id4:
-                        i = id3_markers[0][0]
-                        print("process_qr_data: Different ID stacked, prioritize grabbing id3")
+                if abs(y_id2 - y_id3) > 20: 
+                    if y_id2 < y_id3:
+                        i = id2_markers[0][0]
+                        print("process_qr_data: Different ID stacked, prioritize grabbing id2")
                     else:
-                        i = id4_markers[0][0]
-                        print("process_qr_data: Different ID stacked, prioritize grabbing id4 express box")
+                        i = id3_markers[0][0]
+                        print("process_qr_data: Different ID stacked, prioritize grabbing id3 express box")
                 else:
+                    y_id2 = id2_markers[0][2]
                     y_id3 = id3_markers[0][2]
-                    y_id4 = id4_markers[0][2]
 
-                    if y_id3 < 250 and y_id4 >= 250:
+                    if y_id2 < 250 and y_id3 >= 250:
+                        i = id2_markers[0][0]
+                        print("process_qr_data: Same ID stacked, prioritize grabbing id2")
+                    elif y_id3 < 250 and y_id2 >= 250:
                         i = id3_markers[0][0]
-                        print("process_qr_data: Same ID stacked, prioritize grabbing id3")
-                    elif y_id4 < 250 and y_id3 >= 250:
-                        i = id4_markers[0][0]
-                        print("process_qr_data: Same ID stacked, prioritize grabbing id4 express box")
+                        print("process_qr_data: Same ID stacked, prioritize grabbing id3 express box")
                     else:
-                        i = id3_markers[0][0]
-                        if y_id3 < 250 and y_id4 < 250:
-                            print("process_qr_data: Same ID stacked, prioritize grabbing id3")
+                        i = id2_markers[0][0]
+                        if y_id2 < 250 and y_id3 < 250:
+                            print("process_qr_data: Same ID stacked, prioritize grabbing id2")
                         else:
-                            print("process_qr_data: Same ID stacked, prioritize grabbing id3")
+                            print("process_qr_data: Same ID stacked, prioritize grabbing id2")
                 
                 _z = results[i][2]
                 _ry = results[i][4]
                 _perc = results[i][6][0]/960.0
                 return (_z, _ry, _perc)
 
+            elif total_id2 == 2:
+                print("Two ID2 express boxes")
+                y1, y2 = id2_markers[0][2], id2_markers[1][2]
+                if abs(y1 - y2) > 20: 
+                    i = id2_markers[0][0] if y1 < y2 else id2_markers[1][0]
+                    print("process_qr_data: Same ID stacked, prioritize grabbing id2")
+                else:
+                    if y1 < 250 and y2 >= 250:
+                        i = id2_markers[0][0]
+                        print("process_qr_data: Same ID stacked, prioritize grabbing id2")
+                    elif y2 < 250 and y1 >= 250:
+                        i = id2_markers[1][0]
+                        print("process_qr_data: Same ID stacked, prioritize grabbing id2")
+                    else:
+                        x1, x2 = id2_markers[0][1], id2_markers[1][1]
+                        i = id2_markers[0][0] if x1 < x2 else id2_markers[1][0]
+                        if y1 < 250 and y2 < 250:
+                            print("When two id2s are on the same level and both in the upper area, the left id2 is prioritized.")
+                        else:
+                            print("When two id2s are on the same level and both in the lower area, the left id2 is prioritized.")
+                _z = results[i][2]
+                _ry = results[i][4]
+                _perc = results[i][6][0]/960.0
+                return (_z, _ry, _perc)
+            
             elif total_id3 == 2:
                 print("Two ID3 express boxes")
                 y1, y2 = id3_markers[0][2], id3_markers[1][2]
-                if abs(y1 - y2) > 20: 
+                if abs(y1 - y2) > 20:  
                     i = id3_markers[0][0] if y1 < y2 else id3_markers[1][0]
-                    print("process_qr_data: Same ID stacked, prioritize grabbing id3")
+                    print("process_qr_data: Same ID stacked, prioritize grabbing id3 express box")
                 else:
                     if y1 < 250 and y2 >= 250:
                         i = id3_markers[0][0]
-                        print("process_qr_data: Same ID stacked, prioritize grabbing id3")
+                        print("process_qr_data: Same ID stacked, prioritize grabbing id3 express box")
                     elif y2 < 250 and y1 >= 250:
                         i = id3_markers[1][0]
-                        print("process_qr_data: Same ID stacked, prioritize grabbing id3")
-                    else:
+                        print("process_qr_data: Same ID stacked, prioritize grabbing id3 express box")
                         x1, x2 = id3_markers[0][1], id3_markers[1][1]
                         i = id3_markers[0][0] if x1 < x2 else id3_markers[1][0]
                         if y1 < 250 and y2 < 250:
-                            print("When two id3s are on the same level and both in the upper area, the left id3 is prioritized.")
+                            print("When two id3s are on the same level and both in the upper area, the left id3 express box is prioritized.")
                         else:
-                            print("When two id3s are on the same level and both in the lower area, the left id3 is prioritized.")
-                _z = results[i][2]
-                _ry = results[i][4]
-                _perc = results[i][6][0]/960.0
-                return (_z, _ry, _perc)
-            
-            elif total_id4 == 2:
-                print("Two ID4 express boxes")
-                y1, y2 = id4_markers[0][2], id4_markers[1][2]
-                if abs(y1 - y2) > 20:  
-                    i = id4_markers[0][0] if y1 < y2 else id4_markers[1][0]
-                    print("process_qr_data: Same ID stacked, prioritize grabbing id4 express box")
-                else:
-                    if y1 < 250 and y2 >= 250:
-                        i = id4_markers[0][0]
-                        print("process_qr_data: Same ID stacked, prioritize grabbing id4 express box")
-                    elif y2 < 250 and y1 >= 250:
-                        i = id4_markers[1][0]
-                        print("process_qr_data: Same ID stacked, prioritize grabbing id4 express box")
-                        x1, x2 = id4_markers[0][1], id4_markers[1][1]
-                        i = id4_markers[0][0] if x1 < x2 else id4_markers[1][0]
-                        if y1 < 250 and y2 < 250:
-                            print("When two id4s are on the same level and both in the upper area, the left id4 express box is prioritized.")
-                        else:
-                            print("When two id4s are on the same level and both in the lower area, the left id4 express box is prioritized.")
+                            print("When two id3s are on the same level and both in the lower area, the left id3 express box is prioritized.")
                 _z = results[i][2]
                 _ry = results[i][4]
                 _perc = results[i][6][0]/960.0
                 return (_z, _ry, _perc)
 
-        elif (total_id3 + total_id4) == 3:
+        elif (total_id2 + total_id3) == 3:
             print("Three delivery boxes were detected, and one side must be stacked.")
             
             all_markers = []
+            for i, x, y in id2_markers:
+                all_markers.append((i, 2, x, y)) 
             for i, x, y in id3_markers:
-                all_markers.append((i, 3, x, y)) 
-            for i, x, y in id4_markers:
-                all_markers.append((i, 4, x, y))
+                all_markers.append((i, 3, x, y))
 
             all_markers.sort(key=lambda m: m[3])
 
@@ -829,14 +836,14 @@ def process_qr_data():
             _perc = results[i][6][0]/960.0
             return (_z, _ry, _perc)
 
-        elif (total_id3 + total_id4) == 4 and total_id3 == 2 and total_id4 == 2:
+        elif (total_id2 + total_id3) == 4 and total_id2 == 2 and total_id3 == 2:
             print("Four delivery boxes were detected, and both sides must be stacked.")
 
             all_markers = []
+            for i, x, y in id2_markers:
+                all_markers.append((i, 2, x, y)) 
             for i, x, y in id3_markers:
-                all_markers.append((i, 3, x, y)) 
-            for i, x, y in id4_markers:
-                all_markers.append((i, 4, x, y))
+                all_markers.append((i, 3, x, y))
 
             all_markers.sort(key=lambda m: m[3])
             upper_markers = all_markers[:2]  
@@ -853,32 +860,32 @@ def process_qr_data():
                 print("Both sides are upper layer different ID")
                 target_marker = None
                 for m in upper_markers:
-                    if m[1] == 3:
+                    if m[1] == 2:
                         target_marker = m
                         break
                 
                 if target_marker:
                     i = target_marker[0]
-                    print("Prioritize grabbing the upper-level id3")
+                    print("Prioritize grabbing the upper-level id2")
                 else:
                     i = upper_markers[0][0]
-                    print(f"The upper layer does not have an id3, capture the id from the upper layer{upper_markers[0][1]}")
+                    print(f"The upper layer does not have an id2, capture the id from the upper layer{upper_markers[0][1]}")
             
             _z = results[i][2]
             _ry = results[i][4]
             _perc = results[i][6][0]/960.0
             return (_z, _ry, _perc)
 
-        if has_id3:
-            print("Prioritize grabbing the upper-level id3")
-            i = id3_markers[0][0]
+        if has_id2:
+            print("Prioritize grabbing the upper-level id2")
+            i = id2_markers[0][0]
             _z = results[i][2]
             _ry = results[i][4]
             _perc = results[i][6][0]/960.0
             return (_z, _ry, _perc)
-        elif has_id4:
-            print("Prioritize grabbing the upper-level id4")
-            i = id4_markers[0][0]
+        elif has_id3:
+            print("Prioritize grabbing the upper-level id3")
+            i = id3_markers[0][0]
             _z = results[i][2]
             _ry = results[i][4]
             _perc = results[i][6][0]/960.0
@@ -912,16 +919,19 @@ def process_qr_data_simple():
     data_ = getArucoCode(True)
     
     if data_ is None or len(data_) < 2:
+        # print("DEBUG process_qr_data_simple: getArucoCode returned None/empty")
         return -1
     
     results, ids = data_
+    # print(f"DEBUG process_qr_data_simple: results_count={len(results)}, ids={ids}")
     if not results or ids is None:
+        # print("DEBUG process_qr_data_simple: results empty or ids is None")
         return -1
 
     valid_markers = []
     for i, marker_id in enumerate(ids):
         mid = marker_id[0]
-        if mid in [3, 4] and i < len(results):
+        if mid in [2, 3] and i < len(results):
             valid_markers.append({
                 'id': mid,
                 'x': results[i][6][0],
@@ -933,9 +943,9 @@ def process_qr_data_simple():
     if not valid_markers:
         return -1
 
-    # This sorts ID 3 to the beginning. 
-    # If there are multiple ID 3s, it sorts the left-most one (smallest X) to the front.
-    valid_markers.sort(key=lambda b: (b['id'] != 3, b['x']))
+    # This sorts ID 2 to the beginning. 
+    # If there are multiple ID 2s, it sorts the left-most one (smallest X) to the front.
+    valid_markers.sort(key=lambda b: (b['id'] != 2, b['x']))
 
     # 3. Always take the first one after sorting
     target = valid_markers[0]

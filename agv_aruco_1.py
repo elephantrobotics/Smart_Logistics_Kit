@@ -27,10 +27,14 @@ def handle_request(mode_str):
     elif mode_str == "unload":
         detect_func = aruco_detector.process_qr_data_2
         auto_align_marker()
+        aruco_detector.close_camera()
+        time.sleep(1)
         return "unload align done"
     elif mode_str == "align":
         detect_func = aruco_detector.process_qr_data_simple
         auto_align_marker()
+        aruco_detector.close_camera()
+        time.sleep(1)
         return "align done"
     return "Error: Unknown Mode"
 aruco_detector_res = None
